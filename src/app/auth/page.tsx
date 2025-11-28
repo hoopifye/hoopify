@@ -73,8 +73,8 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="container flex items-center justify-center min-h-[calc(100vh-3.5rem)] py-10">
-            <Card className="w-full max-w-md">
+        <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
+            <Card className="w-full max-w-md mx-auto">
                 <CardHeader>
                     <CardTitle>Welcome to Hoopify</CardTitle>
                     <CardDescription>Sign in to your account or create a new one</CardDescription>
