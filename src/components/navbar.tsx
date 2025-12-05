@@ -21,9 +21,13 @@ export function Navbar() {
       <div className="container flex h-14 max-w-screen-2xl items-center justify-between px-4 md:px-8">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="hidden font-bold sm:inline-block">
-              Hoopify
-            </span>
+            <div className="hidden sm:block">
+              <img
+                src="/banner1.png"
+                alt="Hoopify"
+                className="h-8 w-auto dark:invert"
+              />
+            </div>
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link
@@ -43,8 +47,12 @@ export function Navbar() {
 
         {/* Mobile Logo (visible only on small screens) */}
         <div className="flex md:hidden">
-          <Link href="/" className="flex items-center space-x-2 font-bold">
-            Hoopify
+          <Link href="/" className="flex items-center space-x-2">
+            <img
+              src="/banner1.png"
+              alt="Hoopify"
+              className="h-8 w-auto dark:invert"
+            />
           </Link>
         </div>
 
