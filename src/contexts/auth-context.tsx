@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext } from "react";
+import { useSession, signIn as betterSignIn, signUp as betterSignUp, signOut as betterSignOut } from "@/lib/auth-client";
 
 interface User {
     id: string;
@@ -13,63 +14,53 @@ interface AuthContextType {
     user: User | null;
     login: (email: string, password: string) => Promise<void>;
     signup: (name: string, email: string, password: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // Load user from localStorage on mount
-    useEffect(() => {
-        const storedUser = localStorage.getItem("mockUser");
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setIsLoading(false);
-    }, []);
+    const { data: session, isPending } = useSession();
 
     const login = async (email: string, password: string) => {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Mock validation - accept any email/password
-        const mockUser: User = {
-            id: "1",
-            name: email.split("@")[0],
+        const result = await betterSignIn.email({
             email,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        };
+            password,
+        });
 
-        setUser(mockUser);
-        localStorage.setItem("mockUser", JSON.stringify(mockUser));
+        if (result.error) {
+            throw new Error(result.error.message || "Login failed");
+        }
     };
 
     const signup = async (name: string, email: string, password: string) => {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const mockUser: User = {
-            id: "1",
-            name,
+        const result = await betterSignUp.email({
             email,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        };
+            password,
+            name,
+        });
 
-        setUser(mockUser);
-        localStorage.setItem("mockUser", JSON.stringify(mockUser));
+        if (result.error) {
+            throw new Error(result.error.message || "Signup failed");
+        }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem("mockUser");
+    const logout = async () => {
+        await betterSignOut();
     };
+
+    const user: User | null = session?.user
+        ? {
+              id: session.user.id,
+              name: session.user.name,
+              email: session.user.email,
+              avatar: session.user.image || undefined,
+          }
+        : null;
 
     return (
-        <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, login, signup, logout, isLoading: isPending }}>
             {children}
         </AuthContext.Provider>
     );
