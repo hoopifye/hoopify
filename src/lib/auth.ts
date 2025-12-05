@@ -15,6 +15,29 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
     },
+    // Social Providers (configured but disabled until secrets are provided)
+    socialProviders: {
+        google: {
+            clientId: process.env.GOOGLE_CLIENT_ID || "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+            enabled: false,
+        },
+        github: {
+            clientId: process.env.GITHUB_CLIENT_ID || "",
+            clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+            enabled: false,
+        },
+    },
+    user: {
+        additionalFields: {
+            role: {
+                type: "string",
+                required: false,
+                defaultValue: "USER",
+                input: false, // Don't allow user to set role on signup
+            },
+        },
+    },
     secret: process.env.BETTER_AUTH_SECRET,
 });
 
