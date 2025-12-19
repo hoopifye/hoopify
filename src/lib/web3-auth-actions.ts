@@ -1,12 +1,15 @@
 "use server";
 
-import { prisma } from "@/lib/auth";
+import { auth, prisma } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { recoverMessageAddress } from "viem";
 import crypto from "crypto";
+import { getCookies } from "better-auth/cookies";
 
 export async function loginWithWeb3(address: string, signature: string) {
     try {
+        console.log("BETTER_AUTH_SECRET Present:", !!process.env.BETTER_AUTH_SECRET);
+
         const message = "Sign in to Hoopify";
 
         const recoveredAddress = await recoverMessageAddress({
@@ -28,7 +31,9 @@ export async function loginWithWeb3(address: string, signature: string) {
             },
         });
 
-        const shortAddress = effectiveAddress.slice(0, 8);
+        const shortAddress = effectiveAddress.startsWith("0x")
+            ? effectiveAddress.slice(2, 10)
+            : effectiveAddress.slice(0, 8);
         const profileImage = `https://api.dicebear.com/9.x/identicon/svg?seed=${effectiveAddress}`;
 
         if (account) {
@@ -82,40 +87,32 @@ export async function loginWithWeb3(address: string, signature: string) {
 
         // 2. Create Session manually
         const token = crypto.randomBytes(32).toString("hex");
-        // better-auth by default usually expects hashed token in DB if not configured otherwise
-        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+        const sessionMaxAgeSeconds = auth.options.session?.expiresIn ?? 60 * 60 * 24 * 30;
+        const expiresAt = new Date(Date.now() + sessionMaxAgeSeconds * 1000);
 
         await prisma.session.create({
             data: {
                 userId,
-                token: hashedToken,
+                token,
                 expiresAt,
                 userAgent: "web3-login",
             }
         });
 
-        // 3. Set Cookie with Correct Signature (Base64URL)
-        const secret = process.env.BETTER_AUTH_SECRET || "fjVIfL/J+5gKP76VZBZR0XWgPydHHVYXrltv0lUL9i4=";
+        // 3. Set signed session cookie for Better Auth
+        const secret = auth.options.secret || process.env.BETTER_AUTH_SECRET;
+        if (!secret) {
+            return { error: "Missing BETTER_AUTH_SECRET. Set it to enable web3 login." };
+        }
 
-        // Manual signature logic (Base64URL compliant)
-        const signatureBuffer = crypto.createHmac("sha256", secret).update(token).digest();
-        const signatureBase64 = signatureBuffer.toString("base64");
-        // Replace URL-unsafe chars and strip padding
-        const signatureBase64Url = signatureBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-        const cookieValue = `${token}.${signatureBase64Url}`;
+        const cookieSignature = crypto.createHmac("sha256", secret).update(token).digest("base64");
+        const cookieValue = `${token}.${cookieSignature}`;
 
         const cookieStore = await cookies();
-
-        cookieStore.set("better-auth.session_token", cookieValue, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            path: "/",
-            expires: expiresAt
+        const { sessionToken } = getCookies(auth.options);
+        cookieStore.set(sessionToken.name, cookieValue, {
+            ...sessionToken.options,
+            maxAge: sessionMaxAgeSeconds,
         });
 
         return { success: true };
