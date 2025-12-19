@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth-actions";
 import { UserNav } from "./user-nav";
+import { ModeToggle } from "./mode-toggle";
 
 export async function Navbar() {
   const session = await getSession();
@@ -15,7 +16,7 @@ export async function Navbar() {
             <div className="hidden sm:block">
               <img
                 src="/banner1.png"
-                alt="Hoopify"
+                alt="Hoopifye"
                 className="h-8 w-auto dark:invert"
               />
             </div>
@@ -33,6 +34,14 @@ export async function Navbar() {
             >
               Components
             </Link>
+            {user && (
+              <Link
+                href="/calendar"
+                className="transition-colors hover:text-foreground/80 text-foreground/60"
+              >
+                Calendar
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -41,7 +50,7 @@ export async function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <img
               src="/banner1.png"
-              alt="Hoopify"
+              alt="Hoopifye"
               className="h-8 w-auto dark:invert"
             />
           </Link>
@@ -52,6 +61,7 @@ export async function Navbar() {
             {/* Add search here later if needed */}
           </div>
           <div className="flex items-center gap-2">
+            <ModeToggle />
             {user ? (
               <UserNav user={user} />
             ) : (
