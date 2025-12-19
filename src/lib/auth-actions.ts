@@ -18,10 +18,11 @@ export async function signUpAction(formData: FormData) {
             },
         });
 
-        redirect("/");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign up" };
     }
+
+    redirect("/");
 }
 
 export async function signInAction(formData: FormData) {
@@ -36,10 +37,11 @@ export async function signInAction(formData: FormData) {
             },
         });
 
-        redirect("/");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign in" };
     }
+
+    redirect("/");
 }
 
 export async function signOutAction() {
@@ -51,10 +53,11 @@ export async function signOutAction() {
             },
         });
 
-        redirect("/auth");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign out" };
     }
+
+    redirect("/auth");
 }
 
 export async function getSession() {
