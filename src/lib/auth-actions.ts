@@ -62,15 +62,15 @@ export async function signOutAction() {
 
 export async function getSession() {
     try {
-        const cookieStore = await cookies();
+        const { headers } = await import("next/headers");
         const session = await auth.api.getSession({
-            headers: {
-                cookie: cookieStore.toString(),
-            },
+            headers: await headers(),
         });
 
+        console.log("getSession Result:", session ? `User: ${session.user.email}` : "NULL");
         return session;
     } catch (error) {
+        console.error("getSession Error:", error);
         return null;
     }
 }

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { signInAction, signUpAction } from "@/lib/auth-actions";
+import { signIn, signUp } from "@/lib/auth-client";
 
 export default function AuthPageClient({ initialTab }: { initialTab: string }) {
     const router = useRouter();
@@ -27,12 +27,29 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         setError(null);
 
         const formData = new FormData(e.currentTarget);
-        const result = await signInAction(formData);
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
 
-        if (result?.error) {
-            setError(result.error);
-            setIsLoading(false);
-        }
+        await signIn.email({
+            email,
+            password,
+            callbackURL: "/",
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/");
+                },
+                onResponse: () => {
+                    setIsLoading(false);
+                },
+                onRequest: () => {
+                    setIsLoading(true);
+                },
+                onError: (ctx) => {
+                    setError(ctx.error.message);
+                    setIsLoading(false);
+                },
+            },
+        });
     };
 
     const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,12 +58,31 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         setError(null);
 
         const formData = new FormData(e.currentTarget);
-        const result = await signUpAction(formData);
+        const name = formData.get("name") as string;
+        const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
 
-        if (result?.error) {
-            setError(result.error);
-            setIsLoading(false);
-        }
+        await signUp.email({
+            email,
+            password,
+            name,
+            callbackURL: "/",
+            fetchOptions: {
+                onSuccess: () => {
+                    router.push("/");
+                },
+                onResponse: () => {
+                    setIsLoading(false);
+                },
+                onRequest: () => {
+                    setIsLoading(true);
+                },
+                onError: (ctx) => {
+                    setError(ctx.error.message);
+                    setIsLoading(false);
+                },
+            },
+        });
     };
 
     return (
