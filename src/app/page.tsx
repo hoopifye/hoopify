@@ -89,7 +89,7 @@ export default function Home() {
             variants={fadeInUp}
             className="text-5xl md:text-7xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70"
           >
-            Welcome to Hoopify
+            Welcome to Hoopifye
           </motion.h1>
 
           <motion.p
@@ -210,7 +210,7 @@ export default function Home() {
                 Ready to Get Organized?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Join thousands of users who trust Hoopify to manage their calendars, events, and projects.
+                Join thousands of users who trust Hoopifye to manage their calendars, events, and projects.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="text-lg px-8 gap-2 group" asChild>

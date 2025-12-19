@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth-actions";
 import { UserNav } from "./user-nav";
 import { ModeToggle } from "./mode-toggle";
+import { Logo } from "./logo";
 
 export async function Navbar() {
   const session = await getSession();
@@ -14,11 +15,7 @@ export async function Navbar() {
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <div className="hidden sm:block">
-              <img
-                src="/banner1.png"
-                alt="Hoopifye"
-                className="h-8 w-auto dark:invert"
-              />
+              <Logo />
             </div>
           </Link>
           <nav className="flex items-center gap-6 text-sm font-medium">
@@ -48,11 +45,7 @@ export async function Navbar() {
         {/* Mobile Logo (visible only on small screens) */}
         <div className="flex md:hidden">
           <Link href="/" className="flex items-center space-x-2">
-            <img
-              src="/banner1.png"
-              alt="Hoopifye"
-              className="h-8 w-auto dark:invert"
-            />
+            <Logo />
           </Link>
         </div>
 
