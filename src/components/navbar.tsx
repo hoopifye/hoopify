@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth-actions";
-import { UserNav } from "./user-nav";
+import { NavbarAuth } from "./navbar-auth";
 
 export async function Navbar() {
   const session = await getSession();
   const user = session?.user;
+  console.log("Navbar Session:", session); // DEBUG: Check if session is retrieved
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,19 +52,10 @@ export async function Navbar() {
           <div className="w-full flex-1 md:w-auto md:flex-none">
             {/* Add search here later if needed */}
           </div>
-          <div className="flex items-center gap-2">
-            {user ? (
-              <UserNav user={user} />
-            ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href="/auth?tab=login">Log in</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/auth?tab=signup">Sign up</Link>
-                </Button>
-              </>
-            )}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
+              <NavbarAuth initialSession={session} />
+            </div>
           </div>
         </div>
       </div>
