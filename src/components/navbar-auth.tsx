@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface NavbarAuthProps {
     initialSession: any; // Using any for now to avoid complex type matching from server-client, or we can import Session type
@@ -26,6 +27,10 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
         <div className="flex items-center gap-4">
             {user ? (
                 <div className="flex items-center gap-4">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.image ?? ""} alt={user.name ?? "User"} />
+                        <AvatarFallback>{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback>
+                    </Avatar>
                     <span className="text-sm font-medium">{user.name}</span>
                     <Button
                         variant="outline"
