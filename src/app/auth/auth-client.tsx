@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { signIn, signUp } from "@/lib/auth-client";
+import { loginWithWeb3 } from "@/lib/web3-auth-actions";
+import { Wallet } from "lucide-react";
 
 export default function AuthPageClient({ initialTab }: { initialTab: string }) {
     const router = useRouter();
@@ -79,6 +81,45 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         });
     };
 
+    const handleWeb3Login = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const ethereum = (window as any).ethereum;
+            if (!ethereum) {
+                setError("No crypto wallet found. Please install MetaMask.");
+                setIsLoading(false);
+                return;
+            }
+
+            const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+            const address = accounts[0];
+            const message = "Sign in to Hoopify";
+
+            const signature = await ethereum.request({
+                method: "personal_sign",
+                params: [message, address],
+            });
+
+            const result = await loginWithWeb3(address, signature);
+
+            if (result?.error) {
+                setError(result.error);
+                setIsLoading(false);
+            } else if (result?.success) {
+                window.location.href = "/";
+            } else {
+                setIsLoading(false);
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Web3 login failed");
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
             <Card className="w-full max-w-md mx-auto">
@@ -125,6 +166,18 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     {isLoading ? "Logging in..." : "Log in"}
                                 </Button>
                             </form>
+                            <div className="relative my-4">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                                </div>
+                            </div>
+                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                <Wallet className="mr-2 h-4 w-4" />
+                                Web3 Wallet
+                            </Button>
                         </TabsContent>
 
                         <TabsContent value="signup">
@@ -166,6 +219,18 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     {isLoading ? "Creating account..." : "Sign up"}
                                 </Button>
                             </form>
+                            <div className="relative my-4">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                                </div>
+                            </div>
+                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                <Wallet className="mr-2 h-4 w-4" />
+                                Web3 Wallet
+                            </Button>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
