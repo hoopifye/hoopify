@@ -18,10 +18,11 @@ export async function signUpAction(formData: FormData) {
             },
         });
 
-        redirect("/");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign up" };
     }
+
+    redirect("/");
 }
 
 export async function signInAction(formData: FormData) {
@@ -36,10 +37,11 @@ export async function signInAction(formData: FormData) {
             },
         });
 
-        redirect("/");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign in" };
     }
+
+    redirect("/");
 }
 
 export async function signOutAction() {
@@ -51,23 +53,24 @@ export async function signOutAction() {
             },
         });
 
-        redirect("/auth");
     } catch (error: any) {
         return { error: error?.message || "Failed to sign out" };
     }
+
+    redirect("/auth");
 }
 
 export async function getSession() {
     try {
-        const cookieStore = await cookies();
+        const { headers } = await import("next/headers");
         const session = await auth.api.getSession({
-            headers: {
-                cookie: cookieStore.toString(),
-            },
+            headers: await headers(),
         });
 
+        console.log("getSession Result:", session ? `User: ${session.user.email}` : "NULL");
         return session;
     } catch (error) {
+        console.error("getSession Error:", error);
         return null;
     }
 }

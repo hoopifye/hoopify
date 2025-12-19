@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const sessionCookie = getSessionCookie(request);
 
     // Define protected routes
-    const protectedRoutes = ["/dashboard", "/admin", "/settings"];
+    const protectedRoutes = ["/dashboard", "/admin", "/settings", "/calendar"];
     const isProtectedRoute = protectedRoutes.some((route) =>
         request.nextUrl.pathname.startsWith(route)
     );
@@ -24,6 +24,7 @@ export const config = {
         "/dashboard/:path*",
         "/admin/:path*",
         "/settings/:path*",
+        "/calendar/:path*",
         // Don't run on static files
         "/((?!api|_next/static|_next/image|favicon.ico).*)",
     ],
