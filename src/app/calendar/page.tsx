@@ -14,7 +14,24 @@ type Event = {
   title: string;
   startDate: Date;
   endDate: Date;
+  type: "REMINDER" | "EVENT" | "PROJECT";
 };
+
+function getTimeToEvent(date: Date) {
+  const now = new Date();
+  const diff = new Date(date).getTime() - now.getTime();
+  
+  if (diff < 0) return "started";
+
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days > 0) return `in ${days} day${days > 1 ? 's' : ''}`;
+  if (hours > 0) return `in ${hours} hour${hours > 1 ? 's' : ''}`;
+  if (minutes > 0) return `in ${minutes} minute${minutes > 1 ? 's' : ''}`;
+  return "now";
+}
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -126,8 +143,13 @@ export default function CalendarPage() {
                 {selectedDateEvents.length > 0 ? (
                   <ul className="space-y-2">
                     {selectedDateEvents.map((event) => (
-                      <li key={event.id} className="text-sm p-2 bg-muted rounded-md w-full">
-                        {event.title}
+                      <li key={event.id} className="text-sm p-2 bg-muted rounded-md w-full flex justify-between items-center">
+                        <span className="font-medium">{event.title}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {getTimeToEvent(event.startDate) === "started"
+                            ? "started"
+                            : `${event.type.charAt(0) + event.type.slice(1).toLowerCase()} ${getTimeToEvent(event.startDate)}`}
+                        </span>
                       </li>
                     ))}
                   </ul>
