@@ -1,36 +1,60 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { generateMockEvents, getEventCountForDate, CalendarEvent } from "@/lib/mock-events";
 import { DayButtonProps } from "react-day-picker";
+import { getEvents } from "@/lib/calendar-actions";
+import { AddEventDialog } from "@/components/add-event-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+type Event = {
+  id: string;
+  title: string;
+  startDate: Date;
+  endDate: Date;
+};
 
 export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [events, setEvents] = useState<Event[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const events = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    let allEvents: CalendarEvent[] = [];
-    // Generate events for current year and next year
-    for (let y = year; y <= year + 1; y++) {
-      for (let m = 0; m < 12; m++) {
-        allEvents = [...allEvents, ...generateMockEvents(y, m)];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+      const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 2, 0);
+      
+      try {
+        const fetchedEvents = await getEvents(start, end);
+        setEvents(fetchedEvents);
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
       }
-    }
-    return allEvents;
-  }, []);
+    };
+    fetchEvents();
+  }, [currentMonth, refreshTrigger]);
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
     return events.filter(
       (event) =>
-        event.date.getDate() === selectedDate.getDate() &&
-        event.date.getMonth() === selectedDate.getMonth() &&
-        event.date.getFullYear() === selectedDate.getFullYear()
+        new Date(event.startDate).getDate() === selectedDate.getDate() &&
+        new Date(event.startDate).getMonth() === selectedDate.getMonth() &&
+        new Date(event.startDate).getFullYear() === selectedDate.getFullYear()
     );
   }, [selectedDate, events]);
+
+  const getEventCountForDate = (date: Date) => {
+    return events.filter(
+      (event) =>
+        new Date(event.startDate).getDate() === date.getDate() &&
+        new Date(event.startDate).getMonth() === date.getMonth() &&
+        new Date(event.startDate).getFullYear() === date.getFullYear()
+    ).length;
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -48,15 +72,15 @@ export default function CalendarPage() {
             <CardContent className="flex justify-center">
               <Calendar
                 mode="single"
-                captionLayout="dropdown"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
+                onMonthChange={setCurrentMonth}
                 className="rounded-md border [--cell-size:60px] p-6 [&_button]:text-lg [&_th]:text-lg"
                 components={{
                   DayButton: (props: DayButtonProps) => {
                     const { day } = props;
                     const { date } = day;
-                    const count = getEventCountForDate(events, date);
+                    const count = getEventCountForDate(date);
                     return (
                       <div className="relative w-full h-full">
                         <CalendarDayButton {...props} />
@@ -105,9 +129,11 @@ export default function CalendarPage() {
                 </div>
                 
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Future features: Add events, reminders, and schedule management.
-                  </p>
+                  <AddEventDialog onEventCreated={() => setRefreshTrigger(prev => prev + 1)}>
+                    <Button className="w-full">
+                      <Plus className="mr-2 h-4 w-4" /> Add Event
+                    </Button>
+                  </AddEventDialog>
                 </div>
               </div>
             </CardContent>
