@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DayButtonProps } from "react-day-picker";
 import { getEvents } from "@/lib/calendar-actions";
 import { AddEventDialog } from "@/components/add-event-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 type Event = {
   id: string;
@@ -57,25 +57,37 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">My Calendar</h1>
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] lg:h-auto lg:block lg:container lg:mx-auto lg:py-8 lg:px-4">
+      <div className="flex-1 flex flex-col lg:block max-w-7xl mx-auto w-full min-h-0">
+        <h1 className="shrink-0 text-3xl font-bold py-4 px-4 lg:mb-6 lg:px-0 lg:py-0">My Calendar</h1>
         
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar</CardTitle>
-              <CardDescription>
+        <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 min-h-0">
+          <div className="shrink-0 w-full lg:col-span-5 lg:rounded-xl lg:border lg:bg-card lg:text-card-foreground lg:shadow-sm">
+            <div className="hidden lg:flex flex-col space-y-1.5 p-6">
+              <h3 className="font-semibold leading-none tracking-tight">Calendar</h3>
+              <p className="text-sm text-muted-foreground">
                 Select a date to view or manage your events
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
+              </p>
+            </div>
+            <div className="w-full lg:p-6">
               <Calendar
                 mode="single"
+                captionLayout="dropdown"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 onMonthChange={setCurrentMonth}
-                className="rounded-md border [--cell-size:60px] p-6 [&_button]:text-lg [&_th]:text-lg"
+                className="rounded-md border-0 lg:border lg:[--cell-size:65px] p-0 lg:p-6 [&_button]:text-lg [&_th]:text-lg w-full [&_table_button]:w-full [&_table_button]:h-full [&_table_button]:aspect-square"
+                classNames={{
+                  root: "w-full",
+                  months: "flex w-full flex-col relative",
+                  month: "flex flex-col w-full gap-4",
+                  table: "w-full",
+                  head_row: "w-full flex",
+                  head_cell: "flex-1 w-full",
+                  row: "w-full flex",
+                  cell: "flex-1 w-full aspect-square p-0 relative focus-within:relative focus-within:z-20",
+                  day: "w-full h-full aspect-square p-0",
+                }}
                 components={{
                   DayButton: (props: DayButtonProps) => {
                     const { day } = props;
@@ -94,50 +106,50 @@ export default function CalendarPage() {
                   }
                 }}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Selected Date</CardTitle>
-              <CardDescription>
-                {selectedDate ? selectedDate.toLocaleDateString("en-US", {
+          <div className="flex-1 flex flex-col min-h-0 w-full lg:col-span-6 lg:h-[500px] px-4 lg:px-0 lg:rounded-xl lg:border lg:bg-card lg:text-card-foreground lg:shadow-sm lg:mt-0">
+            <div className="shrink-0 pt-4 pb-2 lg:p-6 lg:pb-4">
+              <h3 className="font-semibold leading-none tracking-tight">
+                {selectedDate ? "Events for " + selectedDate.toLocaleDateString("en-US", {
                   weekday: "long",
                   year: "numeric",
                   month: "long",
                   day: "numeric",
                 }) : "No date selected"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Events for this day</h3>
-                  {selectedDateEvents.length > 0 ? (
-                    <ul className="space-y-2">
-                      {selectedDateEvents.map((event) => (
-                        <li key={event.id} className="text-sm p-2 bg-muted rounded-md">
-                          {event.title}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No events scheduled for this date.
-                    </p>
-                  )}
-                </div>
-                
-                <div className="pt-4 border-t">
-                  <AddEventDialog onEventCreated={() => setRefreshTrigger(prev => prev + 1)}>
-                    <Button className="w-full">
-                      <Plus className="mr-2 h-4 w-4" /> Add Event
-                    </Button>
-                  </AddEventDialog>
-                </div>
+              </h3>
+            </div>
+            <Separator className="my-2 mx-0 w-full lg:my-4"/>
+            <div className="flex-1 overflow-y-auto min-h-0 lg:p-6 lg:pt-0">
+              <div className="pr-2">
+                {selectedDateEvents.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedDateEvents.map((event) => (
+                      <li key={event.id} className="text-sm p-2 bg-muted rounded-md w-full">
+                        {event.title}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No events scheduled for this date.
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+              
+            <div className="shrink-0 py-4 lg:pt-4 lg:mt-4 lg:border-t">
+              <AddEventDialog 
+                selectedDate={selectedDate}
+                onEventCreated={() => setRefreshTrigger(prev => prev + 1)}
+              >
+                <Button className="w-full" disabled={!selectedDate}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Event
+                </Button>
+              </AddEventDialog>
+            </div>
+          </div>
         </div>
       </div>
     </div>

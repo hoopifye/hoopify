@@ -26,7 +26,7 @@ export async function Navbar() {
         {/* Mobile Logo (visible only on small screens) */}
         <div className="flex md:hidden">
           <Link href="/" className="flex items-center space-x-2">
-            <Logo />
+            <Logo square />
           </Link>
         </div>
 

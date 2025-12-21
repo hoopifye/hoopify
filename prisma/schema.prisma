@@ -79,9 +79,25 @@ model Event {
   description String?
   startDate   DateTime
   endDate     DateTime
+  type        EventType @default(EVENT)
+  checklist   ChecklistItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   participants EventParticipant[]
+}
+
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  text      String
+  completed Boolean  @default(false)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum EventType {
+  REMINDER
+  EVENT
+  PROJECT
 }
 
 model EventParticipant {

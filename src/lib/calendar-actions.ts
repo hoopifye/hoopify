@@ -11,6 +11,8 @@ export async function createEvent(data: {
   description?: string;
   startDate: Date;
   endDate: Date;
+  type: "REMINDER" | "EVENT" | "PROJECT";
+  checklist?: string[];
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -26,6 +28,10 @@ export async function createEvent(data: {
       description: data.description,
       startDate: data.startDate,
       endDate: data.endDate,
+      type: data.type,
+      checklist: {
+        create: data.checklist?.map((text) => ({ text })) || [],
+      },
       participants: {
         create: {
           userId: session.user.id,
