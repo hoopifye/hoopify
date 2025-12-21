@@ -5,11 +5,11 @@ import { UserNav } from "./user-nav";
 import { ModeToggle } from "./mode-toggle";
 import { Logo } from "./logo";
 import { NavbarAuth } from "./navbar-auth";
+import { NavbarLinks } from "./navbar-links";
 
 export async function Navbar() {
   const session = await getSession();
   const user = session?.user;
-  console.log("Navbar Session:", session); // DEBUG: Check if session is retrieved
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -20,28 +20,7 @@ export async function Navbar() {
               <Logo />
             </div>
           </Link>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link
-              href="/docs"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Docs
-            </Link>
-            <Link
-              href="/components"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              Components
-            </Link>
-            {user && (
-              <Link
-                href="/calendar"
-                className="transition-colors hover:text-foreground/80 text-foreground/60"
-              >
-                Calendar
-              </Link>
-            )}
-          </nav>
+          <NavbarLinks initialSession={session} />
         </div>
 
         {/* Mobile Logo (visible only on small screens) */}

@@ -25,7 +25,7 @@ export default function CalendarPage() {
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                className="rounded-md border"
+                className="rounded-md border [--cell-size:60px] p-6 [&_button]:text-lg [&_th]:text-lg"
               />
             </CardContent>
           </Card>
