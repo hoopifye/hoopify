@@ -8,6 +8,9 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
+
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
@@ -15,12 +18,21 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
     },
-    // Social Providers (configured but disabled until secrets are provided)
+    // Social Providers (enabled when secrets are provided)
     socialProviders: {
         google: {
-            clientId: process.env.GOOGLE_CLIENT_ID || "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-            enabled: false,
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            enabled: Boolean(googleClientId && googleClientSecret),
+            scope: ["openid", "email", "profile"],
+            overrideUserInfoOnSignIn: true,
+            mapProfileToUser: (profile) => ({
+                id: profile.sub,
+                name: profile.name || profile.email?.split("@")[0] || "Google User",
+                email: profile.email,
+                image: profile.picture,
+                emailVerified: profile.email_verified ?? false,
+            }),
         },
         github: {
             clientId: process.env.GITHUB_CLIENT_ID || "",

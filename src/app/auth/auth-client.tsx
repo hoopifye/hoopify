@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { signIn, signUp } from "@/lib/auth-client";
 import { loginWithWeb3 } from "@/lib/web3-auth-actions";
-import { Wallet } from "lucide-react";
+import { Chrome, Wallet } from "lucide-react";
 
 export default function AuthPageClient({ initialTab }: { initialTab: string }) {
     const router = useRouter();
@@ -120,6 +120,29 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        const result = await signIn.social({
+            provider: "google",
+            callbackURL: "/",
+        });
+
+        if (result?.error) {
+            setError(result.error.message || "Google login failed");
+            setIsLoading(false);
+            return;
+        }
+
+        if (result?.data?.url) {
+            window.location.href = result.data.url;
+            return;
+        }
+
+        setIsLoading(false);
+    };
+
     return (
         <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
             <Card className="w-full max-w-md mx-auto">
@@ -174,10 +197,16 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
                                 </div>
                             </div>
-                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                Web3 Wallet
-                            </Button>
+                            <div className="space-y-2">
+                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+                                    <Chrome className="mr-2 h-4 w-4" />
+                                    Continue with Google
+                                </Button>
+                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    Web3 Wallet
+                                </Button>
+                            </div>
                         </TabsContent>
 
                         <TabsContent value="signup">
@@ -227,10 +256,16 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
                                 </div>
                             </div>
-                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                Web3 Wallet
-                            </Button>
+                            <div className="space-y-2">
+                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+                                    <Chrome className="mr-2 h-4 w-4" />
+                                    Continue with Google
+                                </Button>
+                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    Web3 Wallet
+                                </Button>
+                            </div>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
