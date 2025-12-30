@@ -11,6 +11,11 @@ import { signIn, signUp } from "@/lib/auth-client";
 import { loginWithWeb3 } from "@/lib/web3-auth-actions";
 import { Chrome, Wallet } from "lucide-react";
 
+const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
 export default function AuthPageClient({ initialTab }: { initialTab: string }) {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -31,6 +36,13 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
+
+
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
 
         await signIn.email({
             email,
@@ -61,17 +73,26 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
 
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
+
         await signUp.email({
             email,
             password,
             name,
-            callbackURL: "/",
             fetchOptions: {
                 onResponse: () => {
                     setIsLoading(false);
                 },
                 onRequest: () => {
                     setIsLoading(true);
+                },
+                onSuccess: () => {
+                    sessionStorage.setItem('pending_password', password);
+                    router.push(`/auth?tab=verify-code&email=${encodeURIComponent(email)}`);
                 },
                 onError: (ctx) => {
                     setError(ctx.error.message);
@@ -170,7 +191,7 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                         id="login-email"
                                         name="email"
                                         type="email"
-                                        placeholder="m@example.com"
+                                        placeholder="example@example.com"
                                         required
                                         disabled={isLoading}
                                     />
@@ -189,6 +210,17 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     {isLoading ? "Logging in..." : "Log in"}
                                 </Button>
                             </form>
+                            <div className="text-center my-3">
+                            <a href="/auth?tab=reset-password"
+                                className="bg-background px-2 text-muted-foreground"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setError(null);
+                                    router.push("/auth?tab=reset-password");
+                                }}>       
+                                Forgot your password?
+                                </a>
+                            </div>
                             <div className="relative my-4">
                                 <div className="absolute inset-0 flex items-center">
                                     <span className="w-full border-t" />
@@ -228,7 +260,7 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                         id="signup-email"
                                         name="email"
                                         type="email"
-                                        placeholder="m@example.com"
+                                        placeholder="example@example.com"
                                         required
                                         disabled={isLoading}
                                     />

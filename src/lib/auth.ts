@@ -3,11 +3,14 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "../generated/prisma";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Resend } from "resend";
+import EmailCode from "../components/emails/verification-code";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
+const resend = new Resend(process.env.RESEND_API_KEY || "");
 const googleClientId = process.env.GOOGLE_CLIENT_ID || "";
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
 
@@ -17,8 +20,37 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
+        requireEmailVerification: true,
     },
-    // Social Providers (enabled when secrets are provided)
+    emailVerification: {
+        sendVerificationEmail: async ({ user, url }) => {
+            try {
+                const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                await prisma.verification.create({
+                    data: {
+                        identifier: user.email,
+                        value: verificationCode,
+                        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+                    }
+                });
+
+                await resend.emails.send({
+                    from: `${process.env.EMAIL_SENDER_NAME} <${process.env.EMAIL_SENDER_ADDRESS}>`,
+                    to: user.email,
+                    subject: "Verify your email",
+                    react: EmailCode({ 
+                        username: user.name, 
+                        verificationCode 
+                    }),
+                });
+                console.log("Verification code sent to", user.email);
+            } catch (err) {
+                console.error("Failed to send verification email for", user.email, err);
+            }
+        },
+        sendOnSignUp: true,
+    },
     socialProviders: {
         google: {
             clientId: googleClientId,
@@ -46,7 +78,7 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
                 defaultValue: "USER",
-                input: false, // Don't allow user to set role on signup
+                input: false,
             },
         },
     },
