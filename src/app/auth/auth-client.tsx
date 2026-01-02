@@ -49,6 +49,9 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
             password,
             callbackURL: "/",
             fetchOptions: {
+                onSuccess: () => {
+                    router.push("/");
+                },
                 onResponse: () => {
                     setIsLoading(false);
                 },
@@ -84,6 +87,9 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
             password,
             name,
             fetchOptions: {
+                onSuccess: () => {
+                    router.push("/");
+                },
                 onResponse: () => {
                     setIsLoading(false);
                 },
@@ -168,7 +174,7 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
             <Card className="w-full max-w-md mx-auto">
                 <CardHeader>
-                    <CardTitle>Welcome to Hoopify</CardTitle>
+                    <CardTitle>Welcome to Hoopifye</CardTitle>
                     <CardDescription>Sign in to your account or create a new one</CardDescription>
                 </CardHeader>
                 <CardContent>
