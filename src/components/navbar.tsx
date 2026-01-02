@@ -9,7 +9,12 @@ import { NavbarAuth } from "./navbar-auth";
 export async function Navbar() {
   const session = await getSession();
   const user = session?.user;
-  console.log("Navbar Session:", session); // DEBUG: Check if session is retrieved
+  console.log("Navbar Session:", session);
+  console.log("Navbar User:", session?.user);
+  if (session?.user) {
+    console.log("User Name:", session.user.name);
+    console.log("User Image:", session.user.image);
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
