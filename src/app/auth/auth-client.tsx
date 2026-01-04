@@ -189,123 +189,107 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                             <TabsTrigger value="signup">Sign Up</TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="login">
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="login-email">Email</Label>
-                                    <Input
-                                        id="login-email"
-                                        name="email"
-                                        type="email"
-                                        placeholder="example@example.com"
-                                        required
-                                        disabled={isLoading}
-                                    />
+                        <div className="min-h-70">
+                            <TabsContent value="login">
+                                <form onSubmit={handleLogin} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="login-email">Email</Label>
+                                        <Input
+                                            id="login-email"
+                                            name="email"
+                                            type="email"
+                                            placeholder="example@example.com"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="login-password">Password</Label>
+                                        <Input
+                                            id="login-password"
+                                            name="password"
+                                            type="password"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <Button type="submit" className="w-full" disabled={isLoading}>
+                                        {isLoading ? "Logging in..." : "Log in"}
+                                    </Button>
+                                </form>
+                                <div className="text-center my-3">
+                                    <a href="/auth?tab=reset-password"
+                                        className="bg-background px-2 text-muted-foreground"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setError(null);
+                                            router.push("/auth?tab=reset-password");
+                                        }}>       
+                                        Forgot your password?
+                                    </a>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="login-password">Password</Label>
-                                    <Input
-                                        id="login-password"
-                                        name="password"
-                                        type="password"
-                                        required
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? "Logging in..." : "Log in"}
-                                </Button>
-                            </form>
-                            <div className="text-center my-3">
-                            <a href="/auth?tab=reset-password"
-                                className="bg-background px-2 text-muted-foreground"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setError(null);
-                                    router.push("/auth?tab=reset-password");
-                                }}>       
-                                Forgot your password?
-                                </a>
-                            </div>
-                            <div className="relative my-4">
-                                <div className="absolute inset-0 flex items-center">
-                                    <span className="w-full border-t" />
-                                </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
-                                    <Chrome className="mr-2 h-4 w-4" />
-                                    Continue with Google
-                                </Button>
-                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                    <Wallet className="mr-2 h-4 w-4" />
-                                    Web3 Wallet
-                                </Button>
-                            </div>
-                        </TabsContent>
+                            </TabsContent>
 
-                        <TabsContent value="signup">
-                            <form onSubmit={handleSignup} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="signup-name">Name</Label>
-                                    <Input
-                                        id="signup-name"
-                                        name="name"
-                                        type="text"
-                                        placeholder="John Doe"
-                                        required
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="signup-email">Email</Label>
-                                    <Input
-                                        id="signup-email"
-                                        name="email"
-                                        type="email"
-                                        placeholder="example@example.com"
-                                        required
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="signup-password">Password</Label>
-                                    <Input
-                                        id="signup-password"
-                                        name="password"
-                                        type="password"
-                                        required
-                                        disabled={isLoading}
-                                        minLength={8}
-                                    />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? "Creating account..." : "Sign up"}
-                                </Button>
-                            </form>
-                            <div className="relative my-4">
-                                <div className="absolute inset-0 flex items-center">
-                                    <span className="w-full border-t" />
-                                </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
-                                    <Chrome className="mr-2 h-4 w-4" />
-                                    Continue with Google
-                                </Button>
-                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                    <Wallet className="mr-2 h-4 w-4" />
-                                    Web3 Wallet
-                                </Button>
-                            </div>
-                        </TabsContent>
+                            <TabsContent value="signup">
+                                <form onSubmit={handleSignup} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="signup-name">Name</Label>
+                                        <Input
+                                            id="signup-name"
+                                            name="name"
+                                            type="text"
+                                            placeholder="John Doe"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="signup-email">Email</Label>
+                                        <Input
+                                            id="signup-email"
+                                            name="email"
+                                            type="email"
+                                            placeholder="example@example.com"
+                                            required
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="signup-password">Password</Label>
+                                        <Input
+                                            id="signup-password"
+                                            name="password"
+                                            type="password"
+                                            required
+                                            disabled={isLoading}
+                                            minLength={8}
+                                        />
+                                    </div>
+                                    <Button type="submit" className="w-full" disabled={isLoading}>
+                                        {isLoading ? "Creating account..." : "Sign up"}
+                                    </Button>
+                                </form>
+                            </TabsContent>
+                        </div>
                     </Tabs>
+                    <div className="relative my-4">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+                            <Chrome className="mr-2 h-4 w-4" />
+                            Google Account
+                        </Button>
+                        <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                            <Wallet className="mr-2 h-4 w-4" />
+                            Ethereum Wallet
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>
