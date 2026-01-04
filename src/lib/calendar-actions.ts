@@ -211,17 +211,17 @@ export async function getCalendars() {
 
   let myCalendars = calendarMemberships
     .filter((m) => m.role === "OWNER")
-    .map((m) => m.calendar);
+    .map((m) => ({ ...m.calendar, role: m.role }));
 
   // If user has no calendars, create a default one
   if (myCalendars.length === 0) {
     const defaultCalendar = await getOrCreateDefaultCalendar();
-    myCalendars = [defaultCalendar];
+    myCalendars = [{ ...defaultCalendar, role: "OWNER" as const }];
   }
 
   const sharedCalendars = calendarMemberships
     .filter((m) => m.role !== "OWNER")
-    .map((m) => m.calendar);
+    .map((m) => ({ ...m.calendar, role: m.role }));
 
   // Get all projects user is a member of
   const projectMemberships = await prisma.projectMember.findMany({
@@ -233,7 +233,7 @@ export async function getCalendars() {
     },
   });
 
-  const myProjects = projectMemberships.map((m) => m.project);
+  const myProjects = projectMemberships.map((m) => ({ ...m.project, role: m.role }));
 
   return {
     myCalendars,

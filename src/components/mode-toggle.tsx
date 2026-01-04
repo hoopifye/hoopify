@@ -15,13 +15,26 @@ import {
 export function ModeToggle() {
   const { setTheme, theme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
+  const [open, setOpen] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
+  React.useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon">
           {mounted && theme === "system" ? (

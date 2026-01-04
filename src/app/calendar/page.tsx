@@ -3,12 +3,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { DayButtonProps } from "react-day-picker";
-import { getEvents, getCalendars, getLastSelectedCalendar, updateLastSelectedCalendar } from "@/lib/calendar-actions";
+import { getEvents, getCalendars, getLastSelectedCalendar, updateLastSelectedCalendar, createCalendar } from "@/lib/calendar-actions";
 import { AddEventDialog } from "@/components/add-event-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Check, ChevronsUpDown, Settings, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { searchUsersByEmailAction, addCalendarMemberAction } from "@/lib/settings-actions";
 import {
   Command,
   CommandEmpty,
@@ -23,6 +27,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Event = {
   id: string;
@@ -39,12 +58,14 @@ type CalendarType = {
   description: string | null;
   color: string;
   isDefault: boolean;
+  role?: string;
 };
 
 type ProjectType = {
   id: string;
   name: string;
   description: string | null;
+  role?: string;
 };
 
 function getTimeToEvent(date: Date) {
@@ -64,6 +85,7 @@ function getTimeToEvent(date: Date) {
 }
 
 export default function CalendarPage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
@@ -75,6 +97,82 @@ export default function CalendarPage() {
   }>({ myCalendars: [], sharedCalendars: [], myProjects: [] });
   const [openCombobox, setOpenCombobox] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState<string>("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newCalendarName, setNewCalendarName] = useState("");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState("VIEWER");
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [selectedMembers, setSelectedMembers] = useState<Array<{ email: string; role: string }>>([]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const selectedCalendarData = useMemo(() => {
+    return [...calendars.myCalendars, ...calendars.sharedCalendars, ...calendars.myProjects].find(
+      (cal) => cal.id === selectedCalendar
+    );
+  }, [selectedCalendar, calendars]);
+
+  const canManageCalendar = useMemo(() => {
+    return selectedCalendarData?.role === "OWNER" || selectedCalendarData?.role === "ADMIN";
+  }, [selectedCalendarData]);
+
+  const handleSearchUsers = async (email: string) => {
+    setMemberEmail(email);
+    if (email.length > 2) {
+      const results = await searchUsersByEmailAction(email);
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const handleAddMember = (user: { id: string; name: string; email: string }) => {
+    if (!selectedMembers.find(m => m.email === user.email)) {
+      setSelectedMembers([...selectedMembers, { email: user.email, role: memberRole }]);
+      setMemberEmail("");
+      setSearchResults([]);
+    }
+  };
+
+  const handleRemoveMember = (email: string) => {
+    setSelectedMembers(selectedMembers.filter(m => m.email !== email));
+  };
+
+  const handleCreateCalendar = async () => {
+    if (!newCalendarName.trim()) return;
+    
+    setIsCreating(true);
+    try {
+      const calendar = await createCalendar({ name: newCalendarName.trim() });
+      
+      // Add members if any
+      for (const member of selectedMembers) {
+        const formData = new FormData();
+        formData.append("calendarId", calendar.id);
+        formData.append("userEmail", member.email);
+        formData.append("role", member.role);
+        await addCalendarMemberAction(formData);
+      }
+      
+      // Reset form
+      setNewCalendarName("");
+      setSelectedMembers([]);
+      setCreateDialogOpen(false);
+      
+      // Refresh calendars and select the new one
+      const data = await getCalendars();
+      setCalendars(data as {
+        myCalendars: CalendarType[];
+        sharedCalendars: CalendarType[];
+        myProjects: ProjectType[];
+      });
+      setSelectedCalendar(calendar.id);
+      await updateLastSelectedCalendar(calendar.id);
+    } catch (error) {
+      console.error("Failed to create calendar:", error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchCalendars = async () => {
@@ -130,16 +228,15 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] lg:h-auto lg:block lg:container lg:mx-auto lg:py-8 lg:px-4">
-      <div className="flex-1 flex flex-col lg:block max-w-7xl mx-auto w-full min-h-0">
-        <div className="flex items-center justify-between py-4 px-4 lg:mb-6 lg:px-0 lg:py-0">
-          <h1 className="shrink-0 text-3xl font-bold">My Calendar</h1>
+      <div className="flex-1 flex flex-col lg:block max-w-8xl mx-auto w-full min-h-0">
+        <div className="flex items-center gap-2 py-4 px-4 lg:mb-6 lg:px-0 lg:py-0">
           <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
                 aria-expanded={openCombobox}
-                className="w-[250px] justify-between"
+                className="min-w-0 flex-1 sm:w-[250px] sm:flex-initial justify-between"
               >
                 {selectedCalendar
                   ? [...calendars.myCalendars, ...calendars.sharedCalendars, ...calendars.myProjects].find((calendar) => calendar.id === selectedCalendar)?.name
@@ -236,10 +333,34 @@ export default function CalendarPage() {
                       ))}
                     </CommandGroup>
                   )}
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => {
+                        setCreateDialogOpen(true);
+                        setOpenCombobox(false);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New Calendar
+                    </CommandItem>
+                  </CommandGroup>
                 </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
+          
+          {canManageCalendar && selectedCalendar && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push(`/settings?calendar_id=${selectedCalendar}`)}
+              className="shrink-0"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 min-h-0">
@@ -257,7 +378,7 @@ export default function CalendarPage() {
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 onMonthChange={setCurrentMonth}
-                className="rounded-md border-0 lg:border lg:[--cell-size:65px] p-0 lg:p-6 [&_button]:text-lg [&_th]:text-lg w-full [&_table_button]:w-full [&_table_button]:h-full [&_table_button]:aspect-square"
+                className="rounded-md border-0 lg:border p-0 lg:p-3 [&_button]:text-lg [&_th]:text-lg w-full [&_table_button]:w-full [&_table_button]:h-full [&_table_button]:aspect-square"
                 classNames={{
                   root: "w-full",
                   months: "flex w-full flex-col relative",
@@ -290,7 +411,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 w-full lg:col-span-6 lg:h-[500px] px-4 lg:px-0 lg:rounded-xl lg:border lg:bg-card lg:text-card-foreground lg:shadow-sm lg:mt-0">
+          <div className="flex-1 flex flex-col min-h-0 w-full lg:col-span-7 px-4 lg:px-0 lg:rounded-xl lg:border lg:bg-card lg:text-card-foreground lg:shadow-sm lg:mt-0">
             <div className="shrink-0 pt-4 pb-2 lg:p-6 lg:pb-4">
               <h3 className="font-semibold leading-none tracking-tight">
                 {selectedDate ? "Events for " + selectedDate.toLocaleDateString("en-US", {
@@ -325,7 +446,7 @@ export default function CalendarPage() {
               </div>
             </div>
               
-            <div className="shrink-0 py-4 lg:pt-4 lg:mt-4 lg:border-t">
+            <div className="shrink-0 p-4 lg:pt-4 lg:mt-4 lg:border-t">
               <AddEventDialog 
                 selectedDate={selectedDate}
                 onEventCreated={() => setRefreshTrigger(prev => prev + 1)}
@@ -338,6 +459,99 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Calendar</DialogTitle>
+            <DialogDescription>
+              Create a new calendar and optionally invite members.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="calendar-name">Calendar Name</Label>
+              <Input
+                id="calendar-name"
+                placeholder="My Calendar"
+                value={newCalendarName}
+                onChange={(e) => setNewCalendarName(e.target.value)}
+              />
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label>Invite Members (Optional)</Label>
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    placeholder="Search by email..."
+                    value={memberEmail}
+                    onChange={(e) => handleSearchUsers(e.target.value)}
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-auto">
+                      {searchResults.map((user) => (
+                        <div
+                          key={user.id}
+                          className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                          onClick={() => handleAddMember(user)}
+                        >
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Select value={memberRole} onValueChange={setMemberRole}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                    <SelectItem value="EDITOR">Editor</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {selectedMembers.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {selectedMembers.map((member) => (
+                    <div
+                      key={member.email}
+                      className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
+                    >
+                      <div className="flex-1">
+                        <span className="font-medium">{member.email}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">({member.role})</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveMember(member.email)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCalendar} disabled={!newCalendarName.trim() || isCreating}>
+              {isCreating ? "Creating..." : "Create Calendar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

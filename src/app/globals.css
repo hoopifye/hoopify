@@ -120,3 +120,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Reserve scrollbar gutter to avoid layout shifts between pages */
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Fallback for browsers that don't support `scrollbar-gutter` */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
+}
