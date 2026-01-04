@@ -9,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { signIn, signUp } from "@/lib/auth-client";
 import { loginWithWeb3 } from "@/lib/web3-auth-actions";
-import { Wallet } from "lucide-react";
+import { Chrome, Wallet } from "lucide-react";
+
+const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
 
 export default function AuthPageClient({ initialTab }: { initialTab: string }) {
     const router = useRouter();
@@ -31,6 +36,13 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         const formData = new FormData(e.currentTarget);
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
+
+
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
 
         await signIn.email({
             email,
@@ -64,11 +76,16 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         const email = formData.get("email") as string;
         const password = formData.get("password") as string;
 
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
+
         await signUp.email({
             email,
             password,
             name,
-            callbackURL: "/",
             fetchOptions: {
                 onSuccess: () => {
                     router.push("/");
@@ -78,6 +95,10 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                 },
                 onRequest: () => {
                     setIsLoading(true);
+                },
+                onSuccess: () => {
+                    sessionStorage.setItem('pending_password', password);
+                    router.push(`/auth?tab=verify-code&email=${encodeURIComponent(email)}`);
                 },
                 onError: (ctx) => {
                     setError(ctx.error.message);
@@ -126,6 +147,29 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        const result = await signIn.social({
+            provider: "google",
+            callbackURL: "/",
+        });
+
+        if (result?.error) {
+            setError(result.error.message || "Google login failed");
+            setIsLoading(false);
+            return;
+        }
+
+        if (result?.data?.url) {
+            window.location.href = result.data.url;
+            return;
+        }
+
+        setIsLoading(false);
+    };
+
     return (
         <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
             <Card className="w-full max-w-md mx-auto">
@@ -153,7 +197,7 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                         id="login-email"
                                         name="email"
                                         type="email"
-                                        placeholder="m@example.com"
+                                        placeholder="example@example.com"
                                         required
                                         disabled={isLoading}
                                     />
@@ -172,6 +216,17 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     {isLoading ? "Logging in..." : "Log in"}
                                 </Button>
                             </form>
+                            <div className="text-center my-3">
+                            <a href="/auth?tab=reset-password"
+                                className="bg-background px-2 text-muted-foreground"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setError(null);
+                                    router.push("/auth?tab=reset-password");
+                                }}>       
+                                Forgot your password?
+                                </a>
+                            </div>
                             <div className="relative my-4">
                                 <div className="absolute inset-0 flex items-center">
                                     <span className="w-full border-t" />
@@ -180,10 +235,16 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
                                 </div>
                             </div>
-                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                Web3 Wallet
-                            </Button>
+                            <div className="space-y-2">
+                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+                                    <Chrome className="mr-2 h-4 w-4" />
+                                    Continue with Google
+                                </Button>
+                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    Web3 Wallet
+                                </Button>
+                            </div>
                         </TabsContent>
 
                         <TabsContent value="signup">
@@ -205,7 +266,7 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                         id="signup-email"
                                         name="email"
                                         type="email"
-                                        placeholder="m@example.com"
+                                        placeholder="example@example.com"
                                         required
                                         disabled={isLoading}
                                     />
@@ -233,10 +294,16 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                     <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
                                 </div>
                             </div>
-                            <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                Web3 Wallet
-                            </Button>
+                            <div className="space-y-2">
+                                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+                                    <Chrome className="mr-2 h-4 w-4" />
+                                    Continue with Google
+                                </Button>
+                                <Button variant="outline" type="button" className="w-full" onClick={handleWeb3Login} disabled={isLoading}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    Web3 Wallet
+                                </Button>
+                            </div>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
