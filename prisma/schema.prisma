@@ -40,17 +40,20 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          Role      @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  events        EventParticipant[]
+  id                      String    @id @default(cuid())
+  name                    String
+  email                   String    @unique
+  emailVerified           Boolean   @default(false)
+  image                   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  role                    Role      @default(USER)
+  lastSelectedCalendarId  String?
+  accounts                Account[]
+  sessions                Session[]
+  events                  EventParticipant[]
+  calendars               CalendarMember[]
+  projects                ProjectMember[]
 }
 
 model Session {
@@ -83,6 +86,8 @@ model Event {
   startDate   DateTime
   endDate     DateTime
   type        EventType @default(EVENT)
+  calendarId  String
+  calendar    Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   checklist   ChecklistItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -100,7 +105,6 @@ model ChecklistItem {
 enum EventType {
   REMINDER
   EVENT
-  PROJECT
 }
 
 model EventParticipant {
@@ -120,4 +124,65 @@ enum EventRole {
   OWNER
   EDITOR
   VIEWER
+}
+
+// Calendar Models
+model Calendar {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+  members     CalendarMember[]
+}
+
+enum CalendarRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model CalendarMember {
+  id         String       @id @default(cuid())
+  calendarId String
+  calendar   Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       CalendarRole @default(VIEWER)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([calendarId, userId])
+}
+
+// Project Models
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     ProjectMember[]
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([projectId, userId])
 }

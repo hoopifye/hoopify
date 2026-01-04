@@ -20,22 +20,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createEvent } from "@/lib/calendar-actions";
+import { createEvent, getOrCreateDefaultCalendar } from "@/lib/calendar-actions";
 import { Plus, X } from "lucide-react";
 
 export function AddEventDialog({
   children,
   selectedDate,
   onEventCreated,
+  calendarId,
 }: {
   children: React.ReactNode;
   selectedDate?: Date;
   onEventCreated?: () => void;
+  calendarId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<"REMINDER" | "EVENT" | "PROJECT">("EVENT");
+  const [type, setType] = useState<"REMINDER" | "EVENT">("EVENT");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [checklist, setChecklist] = useState<string[]>([""]);
@@ -120,11 +122,19 @@ export function AddEventDialog({
         }
       }
 
+      // Get or create default calendar if no calendarId provided
+      let targetCalendarId = calendarId;
+      if (!targetCalendarId) {
+        const defaultCalendar = await getOrCreateDefaultCalendar();
+        targetCalendarId = defaultCalendar.id;
+      }
+
       await createEvent({
         title,
         startDate: start,
         endDate: end,
         type,
+        calendarId: targetCalendarId,
         checklist: type === "EVENT" ? checklist.filter(item => item.trim() !== "") : undefined,
       });
 
@@ -167,7 +177,7 @@ export function AddEventDialog({
               </Label>
               <Select
                 value={type}
-                onValueChange={(value: "REMINDER" | "EVENT" | "PROJECT") => setType(value)}
+                onValueChange={(value: "REMINDER" | "EVENT") => setType(value)}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select type" />
@@ -175,9 +185,6 @@ export function AddEventDialog({
                 <SelectContent>
                   <SelectItem value="REMINDER">Reminder</SelectItem>
                   <SelectItem value="EVENT">Event</SelectItem>
-                  <SelectItem value="PROJECT" disabled>
-                    Project (Coming Soon)
-                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

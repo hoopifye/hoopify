@@ -6,12 +6,89 @@ import { headers } from "next/headers";
 
 import { revalidatePath } from "next/cache";
 
+export async function createCalendar(data: {
+  name: string;
+  description?: string;
+  color?: string;
+  isDefault?: boolean;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const calendar = await prisma.calendar.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      color: data.color || "#3b82f6",
+      isDefault: data.isDefault || false,
+      members: {
+        create: {
+          userId: session.user.id,
+          role: "OWNER",
+        },
+      },
+    },
+  });
+
+  revalidatePath("/calendar");
+  return calendar;
+}
+
+export async function getOrCreateDefaultCalendar() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  // Check if user has a default calendar
+  const existingDefault = await prisma.calendar.findFirst({
+    where: {
+      isDefault: true,
+      members: {
+        some: {
+          userId: session.user.id,
+          role: "OWNER",
+        },
+      },
+    },
+  });
+
+  if (existingDefault) {
+    return existingDefault;
+  }
+
+  // Create default calendar
+  const defaultCalendar = await prisma.calendar.create({
+    data: {
+      name: "My Calendar",
+      isDefault: true,
+      members: {
+        create: {
+          userId: session.user.id,
+          role: "OWNER",
+        },
+      },
+    },
+  });
+
+  return defaultCalendar;
+}
+
 export async function createEvent(data: {
   title: string;
   description?: string;
   startDate: Date;
   endDate: Date;
-  type: "REMINDER" | "EVENT" | "PROJECT";
+  type: "REMINDER" | "EVENT";
+  calendarId: string;
   checklist?: string[];
 }) {
   const session = await auth.api.getSession({
@@ -22,6 +99,20 @@ export async function createEvent(data: {
     throw new Error("Unauthorized");
   }
 
+  // Verify user has access to the calendar
+  const calendarMember = await prisma.calendarMember.findUnique({
+    where: {
+      calendarId_userId: {
+        calendarId: data.calendarId,
+        userId: session.user.id,
+      },
+    },
+  });
+
+  if (!calendarMember || calendarMember.role === "VIEWER") {
+    throw new Error("You don't have permission to create events in this calendar");
+  }
+
   const event = await prisma.event.create({
     data: {
       title: data.title,
@@ -29,6 +120,7 @@ export async function createEvent(data: {
       startDate: data.startDate,
       endDate: data.endDate,
       type: data.type,
+      calendarId: data.calendarId,
       checklist: {
         create: data.checklist?.map((text) => ({ text })) || [],
       },
@@ -45,7 +137,7 @@ export async function createEvent(data: {
   return event;
 }
 
-export async function getEvents(startDate: Date, endDate: Date) {
+export async function getEvents(startDate: Date, endDate: Date, calendarId?: string) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -54,13 +146,21 @@ export async function getEvents(startDate: Date, endDate: Date) {
     return [];
   }
 
+  // First get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+
   const events = await prisma.event.findMany({
     where: {
-      participants: {
-        some: {
-          userId: session.user.id,
-        },
-      },
+      calendarId: calendarId ? calendarId : { in: calendarIds },
       startDate: {
         gte: startDate,
       },
@@ -84,4 +184,111 @@ export async function getEvents(startDate: Date, endDate: Date) {
   });
 
   return events;
+}
+
+export async function getCalendars() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return {
+      myCalendars: [],
+      sharedCalendars: [],
+      myProjects: [],
+    };
+  }
+
+  // Get all calendars user is a member of
+  const calendarMemberships = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    include: {
+      calendar: true,
+    },
+  });
+
+  let myCalendars = calendarMemberships
+    .filter((m) => m.role === "OWNER")
+    .map((m) => m.calendar);
+
+  // If user has no calendars, create a default one
+  if (myCalendars.length === 0) {
+    const defaultCalendar = await getOrCreateDefaultCalendar();
+    myCalendars = [defaultCalendar];
+  }
+
+  const sharedCalendars = calendarMemberships
+    .filter((m) => m.role !== "OWNER")
+    .map((m) => m.calendar);
+
+  // Get all projects user is a member of
+  const projectMemberships = await prisma.projectMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    include: {
+      project: true,
+    },
+  });
+
+  const myProjects = projectMemberships.map((m) => m.project);
+
+  return {
+    myCalendars,
+    sharedCalendars,
+    myProjects,
+  };
+}
+
+export async function getLastSelectedCalendar() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { lastSelectedCalendarId: true },
+  });
+
+  if (user?.lastSelectedCalendarId) {
+    return user.lastSelectedCalendarId;
+  }
+
+  // If no last selected calendar, get the default calendar
+  const defaultCalendar = await prisma.calendar.findFirst({
+    where: {
+      isDefault: true,
+      members: {
+        some: {
+          userId: session.user.id,
+          role: "OWNER",
+        },
+      },
+    },
+  });
+
+  return defaultCalendar?.id ?? null;
+}
+
+export async function updateLastSelectedCalendar(calendarId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { lastSelectedCalendarId: calendarId },
+  });
+
+  revalidatePath("/calendar");
 }

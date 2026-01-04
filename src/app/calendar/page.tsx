@@ -3,18 +3,48 @@
 import { useState, useEffect, useMemo } from "react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { DayButtonProps } from "react-day-picker";
-import { getEvents } from "@/lib/calendar-actions";
+import { getEvents, getCalendars, getLastSelectedCalendar, updateLastSelectedCalendar } from "@/lib/calendar-actions";
 import { AddEventDialog } from "@/components/add-event-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Check, ChevronsUpDown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type Event = {
   id: string;
   title: string;
   startDate: Date;
   endDate: Date;
-  type: "REMINDER" | "EVENT" | "PROJECT";
+  type: "REMINDER" | "EVENT";
+  calendarId?: string;
+};
+
+type CalendarType = {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  isDefault: boolean;
+};
+
+type ProjectType = {
+  id: string;
+  name: string;
+  description: string | null;
 };
 
 function getTimeToEvent(date: Date) {
@@ -38,6 +68,31 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [calendars, setCalendars] = useState<{
+    myCalendars: CalendarType[];
+    sharedCalendars: CalendarType[];
+    myProjects: ProjectType[];
+  }>({ myCalendars: [], sharedCalendars: [], myProjects: [] });
+  const [openCombobox, setOpenCombobox] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState<string>("");
+
+  useEffect(() => {
+    const fetchCalendars = async () => {
+      const data = await getCalendars();
+      setCalendars(data as {
+        myCalendars: CalendarType[];
+        sharedCalendars: CalendarType[];
+        myProjects: ProjectType[];
+      });
+      
+      // Load last selected calendar
+      const lastSelected = await getLastSelectedCalendar();
+      if (lastSelected) {
+        setSelectedCalendar(lastSelected);
+      }
+    };
+    fetchCalendars();
+  }, []);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -46,7 +101,7 @@ export default function CalendarPage() {
       
       try {
         const fetchedEvents = await getEvents(start, end);
-        setEvents(fetchedEvents);
+        setEvents(fetchedEvents as Event[]);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       }
@@ -76,7 +131,116 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] lg:h-auto lg:block lg:container lg:mx-auto lg:py-8 lg:px-4">
       <div className="flex-1 flex flex-col lg:block max-w-7xl mx-auto w-full min-h-0">
-        <h1 className="shrink-0 text-3xl font-bold py-4 px-4 lg:mb-6 lg:px-0 lg:py-0">My Calendar</h1>
+        <div className="flex items-center justify-between py-4 px-4 lg:mb-6 lg:px-0 lg:py-0">
+          <h1 className="shrink-0 text-3xl font-bold">My Calendar</h1>
+          <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openCombobox}
+                className="w-[250px] justify-between"
+              >
+                {selectedCalendar
+                  ? [...calendars.myCalendars, ...calendars.sharedCalendars, ...calendars.myProjects].find((calendar) => calendar.id === selectedCalendar)?.name
+                  : "Select calendar..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[250px] p-0">
+              <Command>
+                <CommandInput placeholder="Search calendar..." />
+                <CommandList>
+                  <CommandEmpty>No calendar found.</CommandEmpty>
+                  {calendars.myCalendars.length > 0 && (
+                    <CommandGroup heading="Your Calendars">
+                      {calendars.myCalendars.map((calendar) => (
+                        <CommandItem
+                          key={calendar.id}
+                          value={calendar.name}
+                        onSelect={async () => {
+                          const newId = calendar.id === selectedCalendar ? "" : calendar.id;
+                          setSelectedCalendar(newId);
+                          if (newId) {
+                            await updateLastSelectedCalendar(newId);
+                          }
+                          setOpenCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCalendar === calendar.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {calendar.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {calendars.myCalendars.length > 0 && calendars.sharedCalendars.length > 0 && (
+                    <CommandSeparator />
+                  )}
+                  {calendars.sharedCalendars.length > 0 && (
+                    <CommandGroup heading="Shared with You">
+                      {calendars.sharedCalendars.map((calendar) => (
+                        <CommandItem
+                          key={calendar.id}
+                          value={calendar.name}
+                        onSelect={async () => {
+                          const newId = calendar.id === selectedCalendar ? "" : calendar.id;
+                          setSelectedCalendar(newId);
+                          if (newId) {
+                            await updateLastSelectedCalendar(newId);
+                          }
+                          setOpenCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCalendar === calendar.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {calendar.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                  {(calendars.myCalendars.length > 0 || calendars.sharedCalendars.length > 0) && calendars.myProjects.length > 0 && (
+                    <CommandSeparator />
+                  )}
+                  {calendars.myProjects.length > 0 && (
+                    <CommandGroup heading="My Projects">
+                      {calendars.myProjects.map((project) => (
+                        <CommandItem
+                          key={project.id}
+                          value={project.name}
+                        onSelect={async () => {
+                          const newId = project.id === selectedCalendar ? "" : project.id;
+                          setSelectedCalendar(newId);
+                          if (newId) {
+                            await updateLastSelectedCalendar(newId);
+                          }
+                          setOpenCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCalendar === project.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {project.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
         
         <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 lg:gap-6 min-h-0">
           <div className="shrink-0 w-full lg:col-span-5 lg:rounded-xl lg:border lg:bg-card lg:text-card-foreground lg:shadow-sm">
