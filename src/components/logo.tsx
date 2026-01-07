@@ -8,7 +8,7 @@ export function Logo({ square }: { square?: boolean }) {
   if (square) {
     return (
       <img
-        src="/logo.png"
+        src="/logo.ico"
         alt="Hoopify"
         className="h-8 w-auto"
       />
@@ -17,7 +17,7 @@ export function Logo({ square }: { square?: boolean }) {
 
   return (
     <img
-      src={isDarkMode ? "/banner2.png" : "/banner1.png"}
+      src={isDarkMode ? "/banner2.ico" : "/banner1.ico"}
       alt="Hoopifye"
       className="h-8 w-auto"
     />

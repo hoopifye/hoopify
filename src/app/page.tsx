@@ -232,12 +232,12 @@ export default function Home() {
           </Card>
         </motion.div>
       </section>
-      
+
       {/* Footer */}
       <footer className="relative container mx-auto px-4 py-8 border-t">
         <div className="flex flex-row items-center justify-center gap-2">
           <Image 
-            src="/logo.png" 
+            src="/logo.ico" 
             alt="Hoopifye Logo" 
             width={24} 
             height={24}
