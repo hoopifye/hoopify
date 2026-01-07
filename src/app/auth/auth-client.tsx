@@ -217,14 +217,14 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
                                         {isLoading ? "Logging in..." : "Log in"}
                                     </Button>
                                 </form>
-                                <div className="text-center my-3">
+                                <div className="text-center my-4">
                                     <a href="/auth?tab=reset-password"
                                         className="bg-background px-2 text-muted-foreground"
                                         onClick={(e) => {
                                             e.preventDefault();
                                             setError(null);
                                             router.push("/auth?tab=reset-password");
-                                        }}>       
+                                        }}>
                                         Forgot your password?
                                     </a>
                                 </div>
