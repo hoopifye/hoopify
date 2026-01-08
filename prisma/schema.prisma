@@ -86,6 +86,7 @@ model Event {
   startDate   DateTime
   endDate     DateTime
   type        EventType @default(EVENT)
+  completed   Boolean  @default(false)
   calendarId  String
   calendar    Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   checklist   ChecklistItem[]
