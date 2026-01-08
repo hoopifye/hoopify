@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Command,
   CommandEmpty,
@@ -14,6 +15,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -35,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { changeCalendarMemberRoleAction, leaveCalendarAction, deleteCalendarAction, searchUsersByEmailAction, addCalendarMemberAction } from "@/lib/settings-actions";
+import { changeCalendarMemberRoleAction, leaveCalendarAction, deleteCalendarAction, searchUsersByEmailAction, addCalendarMemberAction, removeCalendarMemberAction, transferCalendarOwnershipAction } from "@/lib/settings-actions";
 
 type CalendarMember = {
   id: string;
@@ -45,7 +47,14 @@ type CalendarMember = {
     id: string;
     name: string;
     email: string;
+    image?: string | null;
   };
+  addedByUser?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  } | null;
 };
 
 type Calendar = {
@@ -89,6 +98,13 @@ export function CalendarPermissionsManager({
     calendarId: string;
     calendarName: string;
   } | null>(null);
+  const [removeDialog, setRemoveDialog] = useState<{
+    open: boolean;
+    calendarId: string;
+    calendarName: string;
+    targetUserId: string;
+    targetUserName: string;
+  } | null>(null);
   const [inviteDialog, setInviteDialog] = useState<{
     open: boolean;
     calendarId: string;
@@ -101,6 +117,41 @@ export function CalendarPermissionsManager({
   const [isInviting, setIsInviting] = useState(false);
 
   const selectedCalendarData = calendars.find((c) => c.id === selectedCalendar);
+
+  const myCalendars = calendars.filter((calendar) =>
+    calendar.members.some(
+      (m) => m.userId === currentUserId && m.role === "OWNER"
+    )
+  );
+
+  const sharedCalendars = calendars.filter((calendar) =>
+    !calendar.members.some(
+      (m) => m.userId === currentUserId && m.role === "OWNER"
+    )
+  );
+
+  // Helper function to check if current user can modify a member
+  const canModifyMember = (
+    member: CalendarMember,
+    currentUserRole: string
+  ): boolean => {
+    const isCurrentUser = member.userId === currentUserId;
+    if (isCurrentUser) return false; // Can't modify yourself
+
+    if (currentUserRole === "OWNER") return true; // Owner can modify anyone
+
+    if (currentUserRole === "EDITOR") {
+      // Editor cannot modify owner
+      if (member.role === "OWNER") return false;
+      // Editor cannot revoke other editors if they were added by owner
+      if (member.role === "EDITOR" && member.addedByUser?.id !== currentUserId) {
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  };
 
   const handleRoleChange = async (
     calendarId: string,
@@ -135,9 +186,12 @@ export function CalendarPermissionsManager({
 
     const formData = new FormData();
     formData.append("calendarId", transferOwnershipDialog.calendarId);
-    formData.append("targetUserId", transferOwnershipDialog.targetUserId);
-    formData.append("role", "OWNER");
-    await changeCalendarMemberRoleAction(formData);
+    formData.append("newOwnerId", transferOwnershipDialog.targetUserId);
+    const result = await transferCalendarOwnershipAction(formData);
+
+    if (result.error) {
+      alert(result.error);
+    }
 
     setTransferOwnershipDialog(null);
   };
@@ -168,6 +222,21 @@ export function CalendarPermissionsManager({
     }
 
     setDeleteDialog(null);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!removeDialog) return;
+
+    const formData = new FormData();
+    formData.append("calendarId", removeDialog.calendarId);
+    formData.append("targetUserId", removeDialog.targetUserId);
+    const result = await removeCalendarMemberAction(formData);
+    
+    if (result.error) {
+      alert(result.error);
+    }
+
+    setRemoveDialog(null);
   };
 
   const handleSearchUsers = async (email: string) => {
@@ -251,33 +320,97 @@ export function CalendarPermissionsManager({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
+          <PopoverContent className="w-[300px] p-0" align="start">
             <Command>
               <CommandInput placeholder="Search calendar..." />
               <CommandList>
                 <CommandEmpty>No calendar found.</CommandEmpty>
-                <CommandGroup>
-                  {calendars.map((calendar) => (
-                    <CommandItem
-                      key={calendar.id}
-                      value={calendar.name}
-                      onSelect={() => {
-                        setSelectedCalendar(calendar.id);
-                        setOpenCombobox(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedCalendar === calendar.id
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {calendar.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+
+                {myCalendars.length > 0 && (
+                  <CommandGroup heading="Your Calendars">
+                    {myCalendars.map((calendar) => {
+                      const owner = calendar.members.find(
+                        (m) => m.role === "OWNER"
+                      )?.user;
+
+                      return (
+                        <CommandItem
+                          key={calendar.id}
+                          value={`${calendar.name} ${owner?.name || ""} ${owner?.email || ""}`}
+                          onSelect={() => {
+                            setSelectedCalendar(calendar.id);
+                            setOpenCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 shrink-0",
+                              selectedCalendar === calendar.id
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{calendar.name}</span>
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+
+                {myCalendars.length > 0 && sharedCalendars.length > 0 && (
+                  <CommandSeparator />
+                )}
+
+                {sharedCalendars.length > 0 && (
+                  <CommandGroup heading="Shared with You">
+                    {sharedCalendars.map((calendar) => {
+                      const owner = calendar.members.find(
+                        (m) => m.role === "OWNER"
+                      )?.user;
+
+                      return (
+                        <CommandItem
+                          key={calendar.id}
+                          value={`${calendar.name} ${owner?.name || ""} ${owner?.email || ""}`}
+                          onSelect={() => {
+                            setSelectedCalendar(calendar.id);
+                            setOpenCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 shrink-0",
+                              selectedCalendar === calendar.id
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {owner && (
+                            <Avatar className="h-6 w-6 mr-2 shrink-0">
+                              <AvatarImage
+                                src={owner.image || undefined}
+                                alt={owner.name}
+                              />
+                              <AvatarFallback className="text-xs">
+                                {owner.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div className="flex flex-col">
+                            <span>{calendar.name}</span>
+                            {owner && (
+                              <span className="text-xs text-muted-foreground">
+                                {owner.name}
+                              </span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
@@ -298,7 +431,7 @@ export function CalendarPermissionsManager({
                   (m) => m.userId === currentUserId
                 );
                 const isOwner = currentMember?.role === "OWNER";
-                const canInvite = isOwner || currentMember?.role === "ADMIN";
+                const canInvite = isOwner || currentMember?.role === "EDITOR";
 
                 return (
                   <>
@@ -367,13 +500,30 @@ export function CalendarPermissionsManager({
                       <th className="px-4 py-3 text-left text-sm font-medium">
                         Action
                       </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">
+                        Remove
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {selectedCalendarData.members.map((m) => {
                       const isCurrentUser = m.userId === currentUserId;
-                      const isOwner = m.role === "OWNER";
-                      const canModify = !isCurrentUser || !isOwner;
+                      const currentUserMember = selectedCalendarData.members.find(
+                        (member) => member.userId === currentUserId
+                      );
+                      const currentUserRole = currentUserMember?.role || "VIEWER";
+                      const canModify = canModifyMember(m, currentUserRole);
+                      
+                      let disabledReason = "";
+                      if (isCurrentUser) {
+                        disabledReason = "Cannot modify your own permissions";
+                      } else if (currentUserRole === "EDITOR") {
+                        if (m.role === "OWNER") {
+                          disabledReason = "Cannot modify owner";
+                        } else if (m.role === "EDITOR" && m.addedByUser?.id !== currentUserId) {
+                          disabledReason = "Cannot modify editors added by owner";
+                        }
+                      }
 
                       return (
                         <tr key={m.id} className="hover:bg-muted/50">
@@ -420,10 +570,29 @@ export function CalendarPermissionsManager({
                               </Select>
                               {!canModify && (
                                 <span className="text-xs text-muted-foreground hidden md:block">
-                                  Cannot remove own ownership
+                                  {disabledReason}
                                 </span>
                               )}
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setRemoveDialog({
+                                  open: true,
+                                  calendarId: selectedCalendarData.id,
+                                  calendarName: selectedCalendarData.name,
+                                  targetUserId: m.userId,
+                                  targetUserName: m.user.name,
+                                })
+                              }
+                              disabled={!canModify}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </td>
                         </tr>
                       );
@@ -657,6 +826,36 @@ export function CalendarPermissionsManager({
               disabled={selectedMembers.length === 0 || isInviting}
             >
               {isInviting ? "Inviting..." : `Invite ${selectedMembers.length} Member${selectedMembers.length !== 1 ? 's' : ''}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog open={removeDialog?.open || false} onOpenChange={(open) => {
+        if (!open) setRemoveDialog(null);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove{" "}
+              <span className="font-semibold">{removeDialog?.targetUserName}</span> from{" "}
+              <span className="font-semibold">{removeDialog?.calendarName}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setRemoveDialog(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmRemoveMember}
+            >
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>

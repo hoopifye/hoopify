@@ -40,7 +40,7 @@ export default async function SettingsPage({
 
     const calendars = await prisma.calendar.findMany({
         where: { members: { some: { userId } } },
-        include: { members: { include: { user: true } } },
+        include: { members: { include: { user: { select: { id: true, name: true, email: true, image: true } }, addedByUser: { select: { id: true, name: true, email: true, image: true } } } } },
     });
 
     return (
