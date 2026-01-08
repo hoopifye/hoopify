@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Calendar, CheckSquare, Users, Zap, Clock, Target, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,8 @@ const features = [
 ];
 
 export default function Home() {
+  const today = new Date().getDate();
+  
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Animated background elements */}
@@ -120,26 +123,28 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-purple-500/20" />
               <div className="relative p-8 md:p-12">
                 <div className="grid grid-cols-7 gap-2 mb-6">
-                  {Array.from({ length: 35 }).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 1 + i * 0.02, duration: 0.3 }}
-                      className={`aspect-square rounded-lg ${
-                        i % 7 === 0 || i % 7 === 6
-                          ? "bg-muted/30"
-                          : Math.random() > 0.7
-                          ? "bg-gradient-to-br from-primary to-purple-500"
-                          : "bg-muted/50"
-                      }`}
-                    />
-                  ))}
+                  {Array.from({ length: 31 }).map((_, i) => {
+                    const dayNumber = i + 1;
+                    const isHighlighted = dayNumber <= today;
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 1 + i * 0.02, duration: 0.3 }}
+                        className={`aspect-square rounded-lg ${
+                          isHighlighted
+                            ? "bg-gradient-to-br from-primary to-purple-500"
+                            : "bg-muted/50"
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
                 <div className="flex gap-3">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
+                    animate={{ width: `${(today / 31) * 100}%` }}
                     transition={{ delay: 2, duration: 0.8 }}
                     className="h-2 rounded-full bg-gradient-to-r from-primary to-purple-500"
                   />
@@ -227,6 +232,22 @@ export default function Home() {
           </Card>
         </motion.div>
       </section>
+
+      {/* Footer */}
+      <footer className="relative container mx-auto px-4 py-8 border-t">
+        <div className="flex flex-row items-center justify-center gap-2">
+          <Image 
+            src="/logo.ico" 
+            alt="Hoopifye Logo" 
+            width={24} 
+            height={24}
+            className="opacity-70"
+          />
+          <p className="text-sm text-muted-foreground">
+            © 2026 All Rights Reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

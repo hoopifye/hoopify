@@ -40,16 +40,21 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          Role      @default(USER)
-  accounts      Account[]
-  sessions      Session[]
+  id                      String    @id @default(cuid())
+  name                    String
+  email                   String    @unique
+  emailVerified           Boolean   @default(false)
+  image                   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  role                    Role      @default(USER)
+  lastSelectedCalendarId  String?
+  accounts                Account[]
+  sessions                Session[]
+  events                  EventParticipant[]
+  calendars               CalendarMember[]
+  projects                ProjectMember[]
+  sentInvites             Invite[]           @relation("SentInvites")
 }
 
 model Session {
@@ -73,4 +78,133 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@unique([identifier, value])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  type        EventType @default(EVENT)
+  calendarId  String
+  calendar    Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  checklist   ChecklistItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  participants EventParticipant[]
+}
+
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  text      String
+  completed Boolean  @default(false)
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum EventType {
+  REMINDER
+  EVENT
+}
+
+model EventParticipant {
+  id        String    @id @default(cuid())
+  eventId   String
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      EventRole @default(VIEWER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([eventId, userId])
+}
+
+enum EventRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+// Calendar Models
+model Calendar {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+  members     CalendarMember[]
+}
+
+enum CalendarRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model CalendarMember {
+  id         String       @id @default(cuid())
+  calendarId String
+  calendar   Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       CalendarRole @default(VIEWER)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([calendarId, userId])
+}
+
+// Project Models
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     ProjectMember[]
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([projectId, userId])
+}
+
+model Invite {
+  id           String       @id @default(cuid())
+  email        String
+  senderId     String
+  sender       User         @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  resourceId   String
+  resourceType String       // "CALENDAR" or "PROJECT"
+  role         String
+  status       InviteStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([email, resourceId, resourceType])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }
