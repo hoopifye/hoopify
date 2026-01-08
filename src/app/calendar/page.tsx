@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { searchUsersByEmailAction, addCalendarMemberAction } from "@/lib/settings-actions";
 import {
@@ -59,6 +60,12 @@ type CalendarType = {
   color: string;
   isDefault: boolean;
   role?: string;
+  owner?: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
 };
 
 type ProjectType = {
@@ -101,8 +108,12 @@ export default function CalendarPage() {
   const [newCalendarName, setNewCalendarName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState("VIEWER");
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; email: string }>>([]);
-  const [selectedMembers, setSelectedMembers] = useState<Array<{ email: string; role: string }>>([]);
+  const [searchResults, setSearchResults] = useState<
+    Array<{ id: string; name: string; email: string; image: string | null }>
+  >([]);
+  const [selectedMembers, setSelectedMembers] = useState<
+    Array<{ email: string; role: string; name?: string | null; image?: string | null }>
+  >([]);
   const [isCreating, setIsCreating] = useState(false);
 
   const selectedCalendarData = useMemo(() => {
@@ -115,6 +126,15 @@ export default function CalendarPage() {
     return selectedCalendarData?.role === "OWNER" || selectedCalendarData?.role === "ADMIN";
   }, [selectedCalendarData]);
 
+  const truncateEmail = (email: string) => {
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return email;
+    const domain = email.slice(atIndex);
+    const local = email.slice(0, atIndex);
+    if (local.length <= 12) return email;
+    return `${local.slice(0, 8)}...${domain}`;
+  };
+
   const handleSearchUsers = async (email: string) => {
     setMemberEmail(email);
     if (email.length > 2) {
@@ -125,9 +145,12 @@ export default function CalendarPage() {
     }
   };
 
-  const handleAddMember = (user: { id: string; name: string; email: string }) => {
+  const handleAddMember = (user: { id: string; name: string; email: string; image: string | null }) => {
     if (!selectedMembers.find(m => m.email === user.email)) {
-      setSelectedMembers([...selectedMembers, { email: user.email, role: memberRole }]);
+      setSelectedMembers([
+        ...selectedMembers,
+        { email: user.email, role: memberRole, name: user.name, image: user.image },
+      ]);
       setMemberEmail("");
       setSearchResults([]);
     }
@@ -135,6 +158,15 @@ export default function CalendarPage() {
 
   const handleRemoveMember = (email: string) => {
     setSelectedMembers(selectedMembers.filter(m => m.email !== email));
+  };
+
+  const resetCreateCalendarState = () => {
+    setNewCalendarName("");
+    setMemberEmail("");
+    setMemberRole("VIEWER");
+    setSearchResults([]);
+    setSelectedMembers([]);
+    setIsCreating(false);
   };
 
   const handleCreateCalendar = async () => {
@@ -154,8 +186,7 @@ export default function CalendarPage() {
       }
       
       // Reset form
-      setNewCalendarName("");
-      setSelectedMembers([]);
+      resetCreateCalendarState();
       setCreateDialogOpen(false);
       
       // Refresh calendars and select the new one
@@ -244,7 +275,7 @@ export default function CalendarPage() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[250px] p-0">
+            <PopoverContent className="w-[250px] p-0" align="start">
               <Command>
                 <CommandInput placeholder="Search calendar..." />
                 <CommandList>
@@ -283,7 +314,7 @@ export default function CalendarPage() {
                       {calendars.sharedCalendars.map((calendar) => (
                         <CommandItem
                           key={calendar.id}
-                          value={calendar.name}
+                          value={`${calendar.name} ${calendar.owner?.name || ""} ${calendar.owner?.email || ""}`}
                         onSelect={async () => {
                           const newId = calendar.id === selectedCalendar ? "" : calendar.id;
                           setSelectedCalendar(newId);
@@ -295,11 +326,26 @@ export default function CalendarPage() {
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
+                              "mr-2 h-4 w-4 shrink-0",
                               selectedCalendar === calendar.id ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          {calendar.name}
+                          {calendar.owner && (
+                            <Avatar className="h-6 w-6 mr-2 shrink-0">
+                              <AvatarImage src={calendar.owner.image || undefined} alt={calendar.owner.name} />
+                              <AvatarFallback className="text-xs">
+                                {calendar.owner.name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div className="flex flex-col">
+                            <span>{calendar.name}</span>
+                            {calendar.owner && (
+                              <span className="text-xs text-muted-foreground">
+                                {calendar.owner.name}
+                              </span>
+                            )}
+                          </div>
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -461,96 +507,158 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Calendar</DialogTitle>
-            <DialogDescription>
-              Create a new calendar and optionally invite members.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="calendar-name">Calendar Name</Label>
-              <Input
-                id="calendar-name"
-                placeholder="My Calendar"
-                value={newCalendarName}
-                onChange={(e) => setNewCalendarName(e.target.value)}
-              />
+      <Dialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) {
+            resetCreateCalendarState();
+          }
+        }}
+      >
+        {/* Fixed position from top (top-[10%]) and removed vertical centering (translate-y-0) to prevent shift.
+            Fixed height container for members list prevents resizing. */}
+        <DialogContent className="sm:max-w-[500px] top-[10%] translate-y-0 flex flex-col gap-0 p-0 overflow-hidden" showCloseButton={false}>
+            <div className="p-6 pb-2">
+            <DialogHeader>
+                <DialogTitle>Create New Calendar</DialogTitle>
+                <DialogDescription>
+                Create a new calendar and optionally invite members.
+                </DialogDescription>
+            </DialogHeader>
             </div>
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <Label>Invite Members (Optional)</Label>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    placeholder="Search by email..."
-                    value={memberEmail}
-                    onChange={(e) => handleSearchUsers(e.target.value)}
-                  />
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-auto">
-                      {searchResults.map((user) => (
-                        <div
-                          key={user.id}
-                          className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
-                          onClick={() => handleAddMember(user)}
-                        >
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
+
+            <div className="p-6 py-4 space-y-4 overflow-y-auto no-scrollbar max-h-[calc(80vh-10rem)]">
+                <div className="space-y-2">
+                <Label htmlFor="calendar-name">Calendar Name</Label>
+                <Input
+                    id="calendar-name"
+                    placeholder="My Calendar"
+                    value={newCalendarName}
+                    onChange={(e) => setNewCalendarName(e.target.value)}
+                />
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                <Label>Invite Members (Optional)</Label>
+                <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                    <Input
+                        placeholder="Search by email..."
+                        value={memberEmail}
+                        onChange={(e) => handleSearchUsers(e.target.value)}
+                    />
+                    {searchResults.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-md max-h-40 overflow-auto">
+                        {searchResults.map((user) => (
+                            <div
+                            key={user.id}
+                            className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                            onClick={() => handleAddMember(user)}
+                            >
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-xs text-muted-foreground">{user.email}</div>
+                            </div>
+                        ))}
                         </div>
-                      ))}
+                    )}
                     </div>
-                  )}
+                    <Select value={memberRole} onValueChange={setMemberRole}>
+                    <SelectTrigger className="w-28">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="VIEWER">Viewer</SelectItem>
+                        <SelectItem value="EDITOR">Editor</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                    </SelectContent>
+                    </Select>
                 </div>
-                <Select value={memberRole} onValueChange={setMemberRole}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="VIEWER">Viewer</SelectItem>
-                    <SelectItem value="EDITOR">Editor</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {selectedMembers.length > 0 && (
-                <div className="space-y-2 mt-3">
-                  {selectedMembers.map((member) => (
-                    <div
-                      key={member.email}
-                      className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
-                    >
-                      <div className="flex-1">
-                        <span className="font-medium">{member.email}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">({member.role})</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveMember(member.email)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                
+                {/* Preallocated space for members (h-48 approx 5-6 items) */}
+                <div className="space-y-2 mt-3 h-48 overflow-y-auto pr-2 border rounded-md p-2 bg-muted/20">
+                    {selectedMembers.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                            No members invited yet
+                        </div>
+                    ) : (
+                        selectedMembers.map((member) => (
+                        <div
+                            key={member.email}
+                            className="flex items-center justify-between p-2 bg-muted rounded-md text-sm"
+                        >
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="flex-1 min-w-0 flex items-center mr-2 text-left focus:outline-none"
+                                >
+                                  <span className="font-medium truncate" title={member.email}>
+                                    {truncateEmail(member.email)}
+                                  </span>
+                                  <span className="ml-2 text-xs text-muted-foreground shrink-0">
+                                    ({member.role})
+                                  </span>
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-3" align="start">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage
+                                      src={member.image || undefined}
+                                      alt={member.name || member.email}
+                                    />
+                                    <AvatarFallback className="text-xs">
+                                      {(member.name || member.email)
+                                        .charAt(0)
+                                        .toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="text-sm">
+                                    <div className="font-medium">
+                                      {member.name || member.email}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {member.email}
+                                    </div>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMember(member.email)}
+                              className="h-6 w-6 p-0 shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        ))
+                    )}
                 </div>
-              )}
+                </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={isCreating}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateCalendar} disabled={!newCalendarName.trim() || isCreating}>
-              {isCreating ? "Creating..." : "Create Calendar"}
-            </Button>
-          </DialogFooter>
+
+            <div className="p-6 pt-2">
+            <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetCreateCalendarState();
+                    setCreateDialogOpen(false);
+                  }}
+                  disabled={isCreating}
+                >
+                Cancel
+                </Button>
+                <Button onClick={handleCreateCalendar} disabled={!newCalendarName.trim() || isCreating}>
+                {isCreating ? "Creating..." : "Create Calendar"}
+                </Button>
+            </DialogFooter>
+            </div>
         </DialogContent>
       </Dialog>
     </div>

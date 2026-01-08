@@ -211,23 +211,58 @@ export async function getCalendars() {
       userId: session.user.id,
     },
     include: {
-      calendar: true,
+      calendar: {
+        include: {
+          members: {
+            where: {
+              role: "OWNER",
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
   let myCalendars = calendarMemberships
     .filter((m) => m.role === "OWNER")
-    .map((m) => ({ ...m.calendar, role: m.role }));
+    .map((m) => ({ 
+      ...m.calendar, 
+      role: m.role,
+      owner: m.calendar.members[0]?.user,
+    }));
 
   // If user has no calendars, create a default one
   if (myCalendars.length === 0) {
     const defaultCalendar = await getOrCreateDefaultCalendar();
-    myCalendars = [{ ...defaultCalendar, role: "OWNER" as const }];
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true, image: true },
+    });
+    myCalendars = [{ 
+      ...defaultCalendar, 
+      role: "OWNER" as const,
+      owner: user,
+      members: [],
+    }];
   }
 
   const sharedCalendars = calendarMemberships
     .filter((m) => m.role !== "OWNER")
-    .map((m) => ({ ...m.calendar, role: m.role }));
+    .map((m) => ({ 
+      ...m.calendar, 
+      role: m.role,
+      owner: m.calendar.members[0]?.user,
+    }));
 
   // Get all projects user is a member of
   const projectMemberships = await prisma.projectMember.findMany({

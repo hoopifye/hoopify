@@ -53,6 +53,7 @@ model User {
   sessions                Session[]
   events                  EventParticipant[]
   calendars               CalendarMember[]
+  calendarMembersAddedBy  CalendarMember[]   @relation("AddedByUser")
   projects                ProjectMember[]
   sentInvites             Invite[]           @relation("SentInvites")
 }
@@ -147,14 +148,16 @@ enum CalendarRole {
 }
 
 model CalendarMember {
-  id         String       @id @default(cuid())
-  calendarId String
-  calendar   Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role       CalendarRole @default(VIEWER)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  calendarId   String
+  calendar     Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         CalendarRole @default(VIEWER)
+  addedByUserId String?
+  addedByUser  User?        @relation("AddedByUser", fields: [addedByUserId], references: [id], onDelete: SetNull)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@unique([calendarId, userId])
 }

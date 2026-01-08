@@ -87,6 +87,7 @@ export async function acceptInviteAction(inviteId: string) {
                         calendarId: invite.resourceId,
                         userId: session.user.id!,
                         role: invite.role as any,
+                        addedByUserId: invite.senderId,
                     },
                 });
             } else if (invite.resourceType === "PROJECT") {
