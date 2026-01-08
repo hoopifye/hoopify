@@ -5,6 +5,7 @@ import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { DayButtonProps } from "react-day-picker";
 import { getEvents, getCalendars, getLastSelectedCalendar, updateLastSelectedCalendar, createCalendar } from "@/lib/calendar-actions";
 import { AddEventDialog } from "@/components/add-event-dialog";
+import { EventDetailDialog } from "@/components/event-detail-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Check, ChevronsUpDown, Settings, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -49,6 +50,7 @@ type Event = {
   startDate: Date;
   endDate: Date;
   type: "REMINDER" | "EVENT";
+  completed: boolean;
   calendarId?: string;
 };
 
@@ -104,6 +106,8 @@ export default function CalendarPage() {
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [selectedMembers, setSelectedMembers] = useState<Array<{ email: string; role: string }>>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventDetailDialogOpen, setEventDetailDialogOpen] = useState(false);
 
   const selectedCalendarData = useMemo(() => {
     return [...calendars.myCalendars, ...calendars.sharedCalendars, ...calendars.myProjects].find(
@@ -224,6 +228,18 @@ export default function CalendarPage() {
         new Date(event.startDate).getMonth() === date.getMonth() &&
         new Date(event.startDate).getFullYear() === date.getFullYear()
     ).length;
+  };
+
+  const handleEventClick = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setEventDetailDialogOpen(true);
+  };
+
+  const handleEventDetailDialogClose = (open: boolean) => {
+    setEventDetailDialogOpen(open);
+    if (!open) {
+      setSelectedEventId(null);
+    }
   };
 
   return (
@@ -428,10 +444,17 @@ export default function CalendarPage() {
                 {selectedDateEvents.length > 0 ? (
                   <ul className="space-y-2">
                     {selectedDateEvents.map((event) => (
-                      <li key={event.id} className="text-sm p-2 bg-muted rounded-md w-full flex justify-between items-center">
+                      <li 
+                        key={event.id} 
+                        className={cn(
+                          "text-sm p-2 bg-muted rounded-md w-full flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors",
+                          event.completed && "opacity-60 line-through"
+                        )}
+                        onClick={() => handleEventClick(event.id)}
+                      >
                         <span className="font-medium">{event.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {getTimeToEvent(event.startDate) === "started"
+                          {event.completed && event.type === "REMINDER" ? "Completed" : getTimeToEvent(event.startDate) === "started"
                             ? "started"
                             : `${event.type.charAt(0) + event.type.slice(1).toLowerCase()} ${getTimeToEvent(event.startDate)}`}
                         </span>
@@ -553,6 +576,13 @@ export default function CalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EventDetailDialog
+        eventId={selectedEventId}
+        open={eventDetailDialogOpen}
+        onOpenChange={handleEventDetailDialogClose}
+        onEventUpdated={() => setRefreshTrigger(prev => prev + 1)}
+      />
     </div>
   );
 }

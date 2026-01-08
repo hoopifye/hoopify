@@ -299,148 +299,167 @@ export async function updateLastSelectedCalendar(calendarId: string) {
   revalidatePath("/calendar");
 }
 
-export async function getUpcomingReminders() {
+export async function getEventDetails(eventId: string) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   if (!session) {
-    return [];
+    throw new Error("Unauthorized");
   }
 
-  // Get all calendars the user is a member of
-  const userCalendars = await prisma.calendarMember.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      calendarId: true,
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      checklist: true,
+      participants: {
+        where: { userId: session.user.id },
+      },
       calendar: {
-        select: {
-          id: true,
-          name: true,
-          color: true,
+        include: {
+          members: {
+            where: { userId: session.user.id },
+          },
         },
       },
     },
   });
 
-  const calendarIds = userCalendars.map((c) => c.calendarId);
-  const calendarMap = new Map(userCalendars.map((c) => [c.calendar.id, c.calendar]));
+  if (!event) {
+    throw new Error("Event not found");
+  }
 
-  const now = new Date();
+  // Check if user has access to this event (either as participant or calendar member)
+  const hasAccess = event.participants.length > 0 || event.calendar.members.length > 0;
+  
+  if (!hasAccess) {
+    throw new Error("You don't have permission to view this event");
+  }
 
-  // Get all REMINDER type events from user's calendars that are upcoming
-  const reminders = await prisma.event.findMany({
-    where: {
-      calendarId: { in: calendarIds },
-      type: "REMINDER",
-      startDate: {
-        gte: now,
-      },
-    },
-    orderBy: {
-      title: "asc",
-    },
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    type: event.type,
+    checklist: event.checklist,
+  };
+}
+
+export async function dismissReminder(eventId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
     include: {
-      checklist: true,
-    },
-  });
-
-  // Attach calendar info to each reminder
-  return reminders.map((reminder) => ({
-    ...reminder,
-    calendar: calendarMap.get(reminder.calendarId) || null,
-  }));
-}
-
-export async function getUpcomingRemindersCount() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    return 0;
-  }
-
-  // Get all calendars the user is a member of
-  const userCalendars = await prisma.calendarMember.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      calendarId: true,
-    },
-  });
-
-  const calendarIds = userCalendars.map((c) => c.calendarId);
-  const now = new Date();
-
-  // Count all upcoming REMINDER and EVENT type items
-  const count = await prisma.event.count({
-    where: {
-      calendarId: { in: calendarIds },
-      type: { in: ["REMINDER", "EVENT"] },
-      startDate: {
-        gte: now,
+      participants: {
+        where: { userId: session.user.id },
       },
-    },
-  });
-
-  return count;
-}
-
-export async function getUpcomingItems() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    return [];
-  }
-
-  // Get all calendars the user is a member of
-  const userCalendars = await prisma.calendarMember.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      calendarId: true,
       calendar: {
-        select: {
-          id: true,
-          name: true,
-          color: true,
+        include: {
+          members: {
+            where: { userId: session.user.id },
+          },
         },
       },
     },
   });
 
-  const calendarIds = userCalendars.map((c) => c.calendarId);
-  const calendarMap = new Map(userCalendars.map((c) => [c.calendar.id, c.calendar]));
+  if (!event) {
+    throw new Error("Event not found");
+  }
 
-  const now = new Date();
+  // Check if it's a reminder
+  if (event.type !== "REMINDER") {
+    throw new Error("Only reminders can be dismissed");
+  }
 
-  // Get all REMINDER and EVENT type items from user's calendars that are upcoming
-  const items = await prisma.event.findMany({
-    where: {
-      calendarId: { in: calendarIds },
-      type: { in: ["REMINDER", "EVENT"] },
-      startDate: {
-        gte: now,
-      },
-    },
-    orderBy: {
-      startDate: "asc",
-    },
+  // Check if user has permission (participant owner or calendar editor/owner)
+  const isParticipantOwner = event.participants.some((p) => p.role === "OWNER");
+  const isCalendarEditorOrOwner = event.calendar.members.some(
+    (m) => m.role === "OWNER" || m.role === "EDITOR"
+  );
+
+  if (!isParticipantOwner && !isCalendarEditorOrOwner) {
+    throw new Error("You don't have permission to dismiss this reminder");
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { completed: true },
+  });
+
+  revalidatePath("/calendar");
+}
+
+export async function toggleChecklistItem(checklistItemId: string, completed: boolean) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const checklistItem = await prisma.checklistItem.findUnique({
+    where: { id: checklistItemId },
     include: {
-      checklist: true,
+      event: {
+        include: {
+          participants: {
+            where: { userId: session.user.id },
+          },
+          calendar: {
+            include: {
+              members: {
+                where: { userId: session.user.id },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  // Attach calendar info to each item
-  return items.map((item) => ({
-    ...item,
-    calendar: calendarMap.get(item.calendarId) || null,
-  }));
+  if (!checklistItem) {
+    throw new Error("Checklist item not found");
+  }
+
+  // Check if user has access (participant or calendar member with editor/owner role)
+  const hasAccess = 
+    checklistItem.event.participants.length > 0 || 
+    checklistItem.event.calendar.members.some(
+      (m) => m.role === "OWNER" || m.role === "EDITOR"
+    );
+
+  if (!hasAccess) {
+    throw new Error("You don't have permission to modify this checklist item");
+  }
+
+  await prisma.checklistItem.update({
+    where: { id: checklistItemId },
+    data: { completed },
+  });
+
+  // Check if all checklist items are completed and update event accordingly
+  const allChecklistItems = await prisma.checklistItem.findMany({
+    where: { eventId: checklistItem.eventId },
+  });
+
+  const allCompleted = allChecklistItems.length > 0 && allChecklistItems.every(item => item.completed);
+  
+  // Update event completed status based on checklist completion
+  await prisma.event.update({
+    where: { id: checklistItem.eventId },
+    data: { completed: allCompleted },
+  });
+
+  revalidatePath("/calendar");
 }
