@@ -146,21 +146,27 @@ export async function getEvents(startDate: Date, endDate: Date, calendarId?: str
     return [];
   }
 
-  // First get all calendars the user is a member of
-  const userCalendars = await prisma.calendarMember.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      calendarId: true,
-    },
-  });
+  let calendarIds: string[];
 
-  const calendarIds = userCalendars.map((c) => c.calendarId);
+  // If a specific calendar is provided, use only that
+  if (calendarId) {
+    calendarIds = [calendarId];
+  } else {
+    // Otherwise get all calendars the user is a member of
+    const userCalendars = await prisma.calendarMember.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        calendarId: true,
+      },
+    });
+    calendarIds = userCalendars.map((c) => c.calendarId);
+  }
 
   const events = await prisma.event.findMany({
     where: {
-      calendarId: calendarId ? calendarId : { in: calendarIds },
+      calendarId: { in: calendarIds },
       startDate: {
         gte: startDate,
       },

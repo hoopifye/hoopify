@@ -19,6 +19,21 @@ const isResendVerificationPath = (pathname: string) => pathname.endsWith("/resen
 export const GET = async (req: Request, ctx: any) => {
     const params = ctx?.params ? await ctx.params : undefined;
     const pathname = new URL(req.url).pathname;
+    const url = new URL(req.url);
+
+    // Intercept OAuth callback errors (user cancelled or access denied)
+    if (pathname.includes('/callback/') && url.searchParams.has('error')) {
+        const error = url.searchParams.get('error');
+        console.log('OAuth callback error:', error);
+        return Response.redirect(`${APP_URL}/auth?error=oauth_failed`, 302);
+    }
+
+    // Intercept Better Auth error page and redirect to our auth page
+    if (pathname.includes('/error') && url.searchParams.has('error')) {
+        const error = url.searchParams.get('error');
+        console.log('Auth error page:', error);
+        return Response.redirect(`${APP_URL}/auth?error=oauth_failed`, 302);
+    }
 
     if (isResetPath(pathname)) {
         try {
@@ -73,7 +88,17 @@ export const GET = async (req: Request, ctx: any) => {
     }
 
     if (typeof handlers.GET === "function") {
-        return handlers.GET(req);
+        try {
+            return await handlers.GET(req);
+        } catch (error) {
+            console.error("Auth GET error:", error);
+            // Redirect to auth page with error for OAuth failures
+            const url = new URL(req.url);
+            if (url.pathname.includes('/callback/')) {
+                return Response.redirect(`${APP_URL}/auth?error=oauth_failed`, 302);
+            }
+            throw error;
+        }
     }
 
     return new Response(JSON.stringify({ error: "Not implemented" }), { 

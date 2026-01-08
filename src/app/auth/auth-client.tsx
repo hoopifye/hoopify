@@ -1,26 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { signIn, signUp } from "@/lib/auth-client";
 import { loginWithWeb3 } from "@/lib/web3-auth-actions";
-import { Chrome, Wallet } from "lucide-react";
+import { Chrome, Wallet, AlertCircle } from "lucide-react";
 
 const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 };
 
-export default function AuthPageClient({ initialTab }: { initialTab: string }) {
+export default function AuthPageClient({ initialTab, error: urlError }: { initialTab: string; error?: string }) {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState(initialTab);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showErrorDialog, setShowErrorDialog] = useState(!!urlError);
+
+    useEffect(() => {
+        if (urlError) {
+            // Clean up the URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete('error');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, [urlError]);
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
@@ -87,9 +104,6 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
             password,
             name,
             fetchOptions: {
-                onSuccess: () => {
-                    router.push("/");
-                },
                 onResponse: () => {
                     setIsLoading(false);
                 },
@@ -172,6 +186,30 @@ export default function AuthPageClient({ initialTab }: { initialTab: string }) {
 
     return (
         <div className="min-h-[calc(100vh-3.5rem)] pt-20 px-4">
+            <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                            <DialogTitle>Oops!</DialogTitle>
+                        </div>
+                        <DialogDescription className="pt-2">
+                            Something went wrong!
+                            <br />
+                            <br />
+                            Try logging in or signing up again now, and if the problem persists try again later or try a different authentication method.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="default"
+                            onClick={() => setShowErrorDialog(false)}
+                        >
+                            Got it
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
             <Card className="w-full max-w-md mx-auto">
                 <CardHeader>
                     <CardTitle>Welcome to Hoopifye</CardTitle>

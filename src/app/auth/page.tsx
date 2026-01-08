@@ -16,8 +16,9 @@ export default async function AuthPage({
         redirect("/");
     }
 
-    const params = (await searchParams) as { tab?: string } | undefined;
+    const params = (await searchParams) as { tab?: string; error?: string } | undefined;
     const tab = params?.tab ?? "login";
+    const error = params?.error;
 
     if (tab === "reset-password") {
         return <ResetPasswordPage />;
@@ -33,5 +34,5 @@ export default async function AuthPage({
 
     const activeTab = tab === "signup" ? "signup" : "login";
 
-    return <AuthPageClient initialTab={activeTab} />;
+    return <AuthPageClient initialTab={activeTab} error={error} />;
 }
