@@ -87,7 +87,7 @@ export async function loginWithWeb3(address: string, signature: string) {
 
         // 2. Create Session manually
         const token = crypto.randomBytes(32).toString("hex");
-        const sessionMaxAgeSeconds = auth.options.session?.expiresIn ?? 60 * 60 * 24 * 30;
+        const sessionMaxAgeSeconds = 60 * 60 * 24 * 30; // 30 days default
         const expiresAt = new Date(Date.now() + sessionMaxAgeSeconds * 1000);
 
         await prisma.session.create({
@@ -110,8 +110,15 @@ export async function loginWithWeb3(address: string, signature: string) {
 
         const cookieStore = await cookies();
         const { sessionToken } = getCookies(auth.options);
+        // Normalize sameSite to lowercase for Next.js compatibility
+        const { sameSite, ...otherOptions } = sessionToken.options;
+        const normalizedSameSite = sameSite 
+            ? (sameSite.toLowerCase() as "lax" | "strict" | "none")
+            : undefined;
+        
         cookieStore.set(sessionToken.name, cookieValue, {
-            ...sessionToken.options,
+            ...otherOptions,
+            sameSite: normalizedSameSite,
             maxAge: sessionMaxAgeSeconds,
         });
 

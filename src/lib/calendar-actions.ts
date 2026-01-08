@@ -248,20 +248,22 @@ export async function getCalendars() {
       where: { id: session.user.id },
       select: { id: true, name: true, email: true, image: true },
     });
-    myCalendars = [{ 
-      ...defaultCalendar, 
-      role: "OWNER" as const,
-      owner: user,
-      members: [],
-    }];
+    if (user) {
+      myCalendars = [{ 
+        ...defaultCalendar, 
+        role: "OWNER" as const,
+        owner: user,
+        members: [],
+      }];
+    }
   }
 
   const sharedCalendars = calendarMemberships
-    .filter((m) => m.role !== "OWNER")
+    .filter((m) => m.role !== "OWNER" && m.calendar.members[0]?.user)
     .map((m) => ({ 
       ...m.calendar, 
       role: m.role,
-      owner: m.calendar.members[0]?.user,
+      owner: m.calendar.members[0]!.user,
     }));
 
   // Get all projects user is a member of
@@ -378,6 +380,7 @@ export async function getEventDetails(eventId: string) {
     startDate: event.startDate,
     endDate: event.endDate,
     type: event.type,
+    completed: event.completed,
     checklist: event.checklist,
   };
 }
@@ -497,4 +500,93 @@ export async function toggleChecklistItem(checklistItemId: string, completed: bo
   });
 
   revalidatePath("/calendar");
+}
+
+export async function getUpcomingRemindersCount() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return 0;
+  }
+
+  // Get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+
+  // Count upcoming events (starting in less than 3 days from 1 hour ago)
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  
+  const count = await prisma.event.count({
+    where: {
+      calendarId: { in: calendarIds },
+      completed: false,
+      startDate: {
+        gte: oneHourAgo,
+        lte: threeDaysFromNow,
+      },
+    },
+  });
+
+  return count;
+}
+
+export async function getUpcomingItems() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return [];
+  }
+
+  // Get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+
+  // Get items from 1 hour ago onwards (late items will be marked as such in the UI)
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  // Get upcoming incomplete events and reminders
+  const items = await prisma.event.findMany({
+    where: {
+      calendarId: { in: calendarIds },
+      completed: false,
+      startDate: {
+        gte: oneHourAgo,
+      },
+    },
+    include: {
+      calendar: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+    },
+    orderBy: {
+      startDate: "asc",
+    },
+  });
+
+  return items;
 }

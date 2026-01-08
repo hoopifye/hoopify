@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Bell, Calendar } from "lucide-react";
+import { Search, Bell, Calendar, ExternalLink } from "lucide-react";
 import { getUpcomingItems } from "@/lib/calendar-actions";
+import { useRouter } from "next/navigation";
 
 type UpcomingItem = {
   id: string;
@@ -23,6 +24,7 @@ type UpcomingItem = {
 };
 
 export default function UpcomingPage() {
+  const router = useRouter();
   const [items, setItems] = useState<UpcomingItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +66,12 @@ export default function UpcomingPage() {
 
   const handleDismiss = (id: string) => {
     setItems((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleOpen = (item: UpcomingItem) => {
+    const date = new Date(item.startDate);
+    const dateStr = date.toISOString().split('T')[0];
+    router.push(`/calendar?date=${dateStr}&event=${item.id}`);
   };
 
   return (
@@ -126,7 +134,11 @@ export default function UpcomingPage() {
                     {isLate(item.startDate) && (
                       <span className="text-xs font-medium text-red-500 whitespace-nowrap">Late</span>
                     )}
-                    <Button size="xs" variant="outline" onClick={() => handleDismiss(item.id)} className="h-7 px-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpen(item)} className="h-7 px-2">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      <span className="text-xs">Open</span>
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDismiss(item.id)} className="h-7 px-2">
                       <span className="text-xs">Dismiss</span>
                     </Button>
                   </div>

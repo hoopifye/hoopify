@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  serverExternalPackages: ['pg', '@prisma/client', 'prisma'],
 };
 
 export default nextConfig;

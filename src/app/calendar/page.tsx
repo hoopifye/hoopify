@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Check, ChevronsUpDown, Settings, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
@@ -95,6 +95,7 @@ function getTimeToEvent(date: Date) {
 
 export default function CalendarPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
@@ -241,6 +242,29 @@ export default function CalendarPage() {
     };
     fetchEvents();
   }, [currentMonth, refreshTrigger, selectedCalendar]);
+
+  // Handle query parameters for date and event
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    const eventParam = searchParams.get('event');
+    
+    if (dateParam) {
+      try {
+        const date = new Date(dateParam);
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
+          setCurrentMonth(date);
+        }
+      } catch (error) {
+        console.error('Invalid date parameter:', error);
+      }
+    }
+    
+    if (eventParam) {
+      setSelectedEventId(eventParam);
+      setEventDetailDialogOpen(true);
+    }
+  }, [searchParams]);
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -489,23 +513,36 @@ export default function CalendarPage() {
               <div className="pr-2">
                 {selectedDateEvents.length > 0 ? (
                   <ul className="space-y-2">
-                    {selectedDateEvents.map((event) => (
-                      <li 
-                        key={event.id} 
-                        className={cn(
-                          "text-sm p-2 bg-muted rounded-md w-full flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors",
-                          event.completed && "opacity-60 line-through"
-                        )}
-                        onClick={() => handleEventClick(event.id)}
-                      >
-                        <span className="font-medium">{event.title}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {event.completed && event.type === "REMINDER" ? "Completed" : getTimeToEvent(event.startDate) === "started"
-                            ? "started"
-                            : `${event.type.charAt(0) + event.type.slice(1).toLowerCase()} ${getTimeToEvent(event.startDate)}`}
-                        </span>
-                      </li>
-                    ))}
+                    {selectedDateEvents.map((event) => {
+                      const now = new Date();
+                      const isLate = !event.completed && new Date(event.startDate) < now;
+                      
+                      return (
+                        <li 
+                          key={event.id} 
+                          className={cn(
+                            "text-sm p-2 bg-muted rounded-md w-full flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors",
+                            event.completed && "opacity-60 line-through",
+                            isLate && "border-l-4 border-red-500"
+                          )}
+                          onClick={() => handleEventClick(event.id)}
+                        >
+                          <span className="font-medium">{event.title}</span>
+                          <span className={cn(
+                            "text-xs text-muted-foreground",
+                            isLate && "text-red-500 font-semibold"
+                          )}>
+                            {event.completed && event.type === "REMINDER" 
+                              ? "Completed" 
+                              : isLate
+                                ? "Late"
+                                : getTimeToEvent(event.startDate) === "started"
+                                  ? "started"
+                                  : `${event.type.charAt(0) + event.type.slice(1).toLowerCase()} ${getTimeToEvent(event.startDate)}`}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">
