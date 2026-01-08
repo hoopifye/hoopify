@@ -198,14 +198,14 @@ export default function CalendarPage() {
       const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 2, 0);
       
       try {
-        const fetchedEvents = await getEvents(start, end);
+        const fetchedEvents = await getEvents(start, end, selectedCalendar || undefined);
         setEvents(fetchedEvents as Event[]);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       }
     };
     fetchEvents();
-  }, [currentMonth, refreshTrigger]);
+  }, [currentMonth, refreshTrigger, selectedCalendar]);
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -450,6 +450,7 @@ export default function CalendarPage() {
               <AddEventDialog 
                 selectedDate={selectedDate}
                 onEventCreated={() => setRefreshTrigger(prev => prev + 1)}
+                calendarId={selectedCalendar}
               >
                 <Button className="w-full" disabled={!selectedDate}>
                   <Plus className="mr-2 h-4 w-4" /> Add Event

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
-import { Calendar, Settings, Mail } from "lucide-react";
+import { Calendar, Settings, Mail, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getUpcomingRemindersCount } from "@/lib/calendar-actions";
 
 interface NavbarLinksProps {
     initialSession?: any;
@@ -17,9 +19,26 @@ export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
     const effectiveSession = session === undefined ? initialSession : session;
     const user = effectiveSession?.user;
 
+    const [reminderCount, setReminderCount] = useState(0);
+
+    useEffect(() => {
+        async function fetchReminderCount() {
+            if (user) {
+                try {
+                    const count = await getUpcomingRemindersCount();
+                    setReminderCount(count);
+                } catch (error) {
+                    console.error("Failed to fetch reminder count:", error);
+                }
+            }
+        }
+        fetchReminderCount();
+    }, [user]);
+
     const isCalendarPage = pathname === "/calendar";
     const isSettingsPage = pathname === "/settings";
     const isInvitesPage = pathname === "/invites";
+    const isRemindersPage = pathname === "/reminders";
 
     return (
         <nav className="flex items-center gap-6 text-sm font-medium">
@@ -46,6 +65,21 @@ export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
                             )}
                         </div>
                         <span className={isInvitesPage ? "" : "hidden md:inline"}>Invites</span>
+                    </Link>
+
+                    <Link
+                        href="/reminders"
+                        className="transition-colors hover:text-foreground/80 text-foreground/60 flex items-center gap-2"
+                    >
+                        <div className="relative">
+                            <Bell className="h-5 w-5 md:h-4 md:w-4" />
+                            {reminderCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
+                                    {reminderCount}
+                                </span>
+                            )}
+                        </div>
+                        <span className={isRemindersPage ? "" : "hidden md:inline"}>Upcoming</span>
                     </Link>
 
                     <Link

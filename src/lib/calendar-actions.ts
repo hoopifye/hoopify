@@ -292,3 +292,149 @@ export async function updateLastSelectedCalendar(calendarId: string) {
 
   revalidatePath("/calendar");
 }
+
+export async function getUpcomingReminders() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return [];
+  }
+
+  // Get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+      calendar: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+  const calendarMap = new Map(userCalendars.map((c) => [c.calendar.id, c.calendar]));
+
+  const now = new Date();
+
+  // Get all REMINDER type events from user's calendars that are upcoming
+  const reminders = await prisma.event.findMany({
+    where: {
+      calendarId: { in: calendarIds },
+      type: "REMINDER",
+      startDate: {
+        gte: now,
+      },
+    },
+    orderBy: {
+      title: "asc",
+    },
+    include: {
+      checklist: true,
+    },
+  });
+
+  // Attach calendar info to each reminder
+  return reminders.map((reminder) => ({
+    ...reminder,
+    calendar: calendarMap.get(reminder.calendarId) || null,
+  }));
+}
+
+export async function getUpcomingRemindersCount() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return 0;
+  }
+
+  // Get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+  const now = new Date();
+
+  // Count all upcoming REMINDER and EVENT type items
+  const count = await prisma.event.count({
+    where: {
+      calendarId: { in: calendarIds },
+      type: { in: ["REMINDER", "EVENT"] },
+      startDate: {
+        gte: now,
+      },
+    },
+  });
+
+  return count;
+}
+
+export async function getUpcomingItems() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return [];
+  }
+
+  // Get all calendars the user is a member of
+  const userCalendars = await prisma.calendarMember.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    select: {
+      calendarId: true,
+      calendar: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+    },
+  });
+
+  const calendarIds = userCalendars.map((c) => c.calendarId);
+  const calendarMap = new Map(userCalendars.map((c) => [c.calendar.id, c.calendar]));
+
+  const now = new Date();
+
+  // Get all REMINDER and EVENT type items from user's calendars that are upcoming
+  const items = await prisma.event.findMany({
+    where: {
+      calendarId: { in: calendarIds },
+      type: { in: ["REMINDER", "EVENT"] },
+      startDate: {
+        gte: now,
+      },
+    },
+    orderBy: {
+      startDate: "asc",
+    },
+    include: {
+      checklist: true,
+    },
+  });
+
+  // Attach calendar info to each item
+  return items.map((item) => ({
+    ...item,
+    calendar: calendarMap.get(item.calendarId) || null,
+  }));
+}
