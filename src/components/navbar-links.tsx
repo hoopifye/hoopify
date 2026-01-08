@@ -5,14 +5,12 @@ import { useSession } from "@/lib/auth-client";
 import { Calendar, Settings, Mail, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getUpcomingRemindersCount } from "@/lib/calendar-actions";
+import { getPendingInvitesCountAction } from "@/lib/invite-actions";
 
 interface NavbarLinksProps {
     initialSession?: any;
     pathname: string;
 }
-
-// Hardcoded invite count - in a real app, this would come from an API
-const INVITE_COUNT = 3;
 
 export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
     const { data: session } = useSession();
@@ -20,19 +18,24 @@ export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
     const user = effectiveSession?.user;
 
     const [reminderCount, setReminderCount] = useState(0);
+    const [inviteCount, setInviteCount] = useState(0);
 
     useEffect(() => {
-        async function fetchReminderCount() {
+        async function fetchCounts() {
             if (user) {
                 try {
-                    const count = await getUpcomingRemindersCount();
-                    setReminderCount(count);
+                    const [rCount, iCount] = await Promise.all([
+                        getUpcomingRemindersCount(),
+                        getPendingInvitesCountAction()
+                    ]);
+                    setReminderCount(rCount);
+                    setInviteCount(iCount);
                 } catch (error) {
-                    console.error("Failed to fetch reminder count:", error);
+                    console.error("Failed to fetch counts:", error);
                 }
             }
         }
-        fetchReminderCount();
+        fetchCounts();
     }, [user]);
 
     const isCalendarPage = pathname === "/calendar";
@@ -58,9 +61,9 @@ export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
                     >
                         <div className="relative">
                             <Mail className="h-5 w-5 md:h-4 md:w-4" />
-                            {INVITE_COUNT > 0 && (
+                            {inviteCount > 0 && (
                                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
-                                    {INVITE_COUNT}
+                                    {inviteCount}
                                 </span>
                             )}
                         </div>

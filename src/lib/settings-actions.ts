@@ -224,16 +224,46 @@ export async function addCalendarMemberAction(formData: FormData) {
 
     if (existingMember) return { error: "User is already a member" };
 
+    // Check if there is already a pending invite
+    const existingInvite = await prisma.invite.findUnique({
+        where: {
+            email_resourceId_resourceType: {
+                email: userEmail,
+                resourceId: calendarId,
+                resourceType: "CALENDAR",
+            },
+        },
+    });
+
+    if (existingInvite && existingInvite.status === "PENDING") {
+        return { error: "An invitation is already pending for this user" };
+    }
+
     try {
-        await prisma.calendarMember.create({
-            data: {
-                calendarId,
-                userId: targetUser.id,
-                role: role as any,
+        await prisma.invite.upsert({
+            where: {
+                email_resourceId_resourceType: {
+                    email: userEmail,
+                    resourceId: calendarId,
+                    resourceType: "CALENDAR",
+                },
+            },
+            update: {
+                role,
+                status: "PENDING",
+                senderId: session.user.id,
+            },
+            create: {
+                email: userEmail,
+                resourceId: calendarId,
+                resourceType: "CALENDAR",
+                role,
+                status: "PENDING",
+                senderId: session.user.id,
             },
         });
     } catch (err: any) {
-        return { error: err?.message || "Failed to add member" };
+        return { error: err?.message || "Failed to create invitation" };
     }
 
     return { success: true };
