@@ -1,7 +1,23 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  // Production optimizations
+  output: "standalone",
+  
+  // Image domains for external images
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com", // Google profile pictures
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com", // GitHub profile pictures
+      },
+    ],
+  },
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
