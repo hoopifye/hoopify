@@ -13,15 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createEvent, getOrCreateDefaultCalendar } from "@/lib/calendar-actions";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Bell, Calendar } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function AddEventDialog({
   children,
@@ -150,15 +144,15 @@ export function AddEventDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] top-[10%] translate-y-0 h-[580px] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add {type === "REMINDER" ? "Reminder" : "Event"}</DialogTitle>
           <DialogDescription>
             Add a new item to your calendar for {selectedDate?.toLocaleDateString()}.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="grid gap-4 py-4 flex-1 min-h-0">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="date" className="text-right">
                 Date
@@ -172,21 +166,37 @@ export function AddEventDialog({
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
+              <Label className="text-right">
                 Type
               </Label>
-              <Select
-                value={type}
-                onValueChange={(value: "REMINDER" | "EVENT") => setType(value)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="REMINDER">Reminder</SelectItem>
-                  <SelectItem value="EVENT">Event</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="col-span-3 flex rounded-lg border p-1 bg-muted/50">
+                <button
+                  type="button"
+                  onClick={() => setType("REMINDER")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                    type === "REMINDER"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Bell className="h-4 w-4" />
+                  Reminder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType("EVENT")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                    type === "EVENT"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Event
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
@@ -241,11 +251,11 @@ export function AddEventDialog({
               </div>
             </div>
 
-            {type === "EVENT" && (
-              <div className="grid grid-cols-4 gap-4 items-start">
+            {type === "EVENT" ? (
+              <div className="grid grid-cols-4 gap-4 items-start flex-1 min-h-0">
                 <Label className="text-right pt-3">Checklist</Label>
-                <div className="col-span-3 h-64 flex flex-col">
-                  <div className="overflow-y-auto min-h-0 space-y-2 pr-2">
+                <div className="col-span-3 flex flex-col min-h-0 h-[180px]">
+                  <div className="overflow-y-auto min-h-0 space-y-2 pr-2 flex-1">
                     {checklist.map((item, index) => (
                       <div key={index} className="flex gap-2">
                         <Input
@@ -268,12 +278,13 @@ export function AddEventDialog({
                   <Button type="button" variant="outline" size="sm" onClick={addChecklistItem} className="w-full mt-2 shrink-0">
                     <Plus className="mr-2 h-4 w-4" /> Add Item
                   </Button>
-                  <div className="flex-1" />
                 </div>
               </div>
+            ) : (
+              <div className="h-[180px]" />
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button type="submit" disabled={loading}>
               {loading ? "Creating..." : "Create"}
             </Button>

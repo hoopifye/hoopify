@@ -30,6 +30,11 @@ export default function AuthPageClient({ initialTab, error: urlError }: { initia
     const [error, setError] = useState<string | null>(null);
     const [showErrorDialog, setShowErrorDialog] = useState(!!urlError);
 
+    // Sync activeTab with initialTab when URL changes (e.g., clicking navbar buttons)
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
+
     useEffect(() => {
         if (urlError) {
             // Clean up the URL

@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Bell, Calendar } from "lucide-react";
+import { Search, Bell, Calendar, ExternalLink } from "lucide-react";
 import { getUpcomingItems } from "@/lib/calendar-actions";
+import { useRouter } from "next/navigation";
 
 type UpcomingItem = {
   id: string;
@@ -23,9 +24,20 @@ type UpcomingItem = {
 };
 
 export default function UpcomingPage() {
+  const router = useRouter();
   const [items, setItems] = useState<UpcomingItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleViewItem = (item: UpcomingItem) => {
+    const params = new URLSearchParams();
+    if (item.calendarId) {
+      params.set('calendar_id', item.calendarId);
+    }
+    params.set('event_id', item.id);
+    params.set('date', new Date(item.startDate).toISOString());
+    router.push(`/calendar?${params.toString()}`);
+  };
 
   const isLate = (startDate: Date) => {
     const now = new Date();
@@ -126,6 +138,10 @@ export default function UpcomingPage() {
                     {isLate(item.startDate) && (
                       <span className="text-xs font-medium text-red-500 whitespace-nowrap">Late</span>
                     )}
+                    <Button size="sm" variant="outline" onClick={() => handleViewItem(item)} className="h-7 px-2">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      <span className="text-xs">View</span>
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => handleDismiss(item.id)} className="h-7 px-2">
                       <span className="text-xs">Dismiss</span>
                     </Button>
