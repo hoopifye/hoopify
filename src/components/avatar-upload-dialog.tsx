@@ -42,6 +42,10 @@ export function AvatarUploadDialog({ currentAvatar }: AvatarUploadDialogProps) {
   const handleUrlSubmit = async () => {
     const formData = new FormData();
     formData.append("image", avatarUrl);
+    
+    // Dispatch event for optimistic update
+    window.dispatchEvent(new CustomEvent("avatar-updated", { detail: avatarUrl }));
+    
     await updateAvatarAction(formData);
     setOpen(false);
   };
@@ -54,6 +58,10 @@ export function AvatarUploadDialog({ currentAvatar }: AvatarUploadDialogProps) {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64String = reader.result as string;
+      
+      // Dispatch event for optimistic update
+      window.dispatchEvent(new CustomEvent("avatar-updated", { detail: base64String }));
+      
       const formData = new FormData();
       formData.append("image", base64String);
       await updateAvatarAction(formData);

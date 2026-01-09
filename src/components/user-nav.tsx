@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/lib/auth-actions";
 import { useTransition } from "react";
+import { useUserStore } from "@/hooks/use-user-store";
 
 interface UserNavProps {
   user: {
@@ -22,11 +23,17 @@ interface UserNavProps {
   };
 }
 
-export function UserNav({ user }: UserNavProps) {
+export function UserNav({ user: initialUser }: UserNavProps) {
   const [isPending, startTransition] = useTransition();
+  const { user: storedUser, clearUser } = useUserStore();
+  
+  // Use stored user for optimistic updates, fallback to initial user
+  const user = storedUser || initialUser;
 
   const handleSignOut = () => {
     startTransition(async () => {
+      clearUser();
+      window.dispatchEvent(new CustomEvent("user-logout"));
       await signOutAction();
     });
   };

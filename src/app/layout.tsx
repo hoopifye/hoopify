@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UserStoreProvider } from "@/hooks/use-user-store";
 import { getSession } from "@/lib/auth-actions";
 
 const geistSans = Geist({
@@ -39,10 +40,12 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar session={session} />
-          <main className="flex-1">
-            {children}
-          </main>
+          <UserStoreProvider initialUser={session?.user}>
+            <Navbar session={session} />
+            <main className="flex-1">
+              {children}
+            </main>
+          </UserStoreProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -14,12 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { createEvent, getOrCreateDefaultCalendar } from "@/lib/calendar-actions";
 import { Plus, X } from "lucide-react";
 
@@ -150,7 +148,7 @@ export function AddEventDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] top-[10%] translate-y-0">
         <DialogHeader>
           <DialogTitle>Add {type === "REMINDER" ? "Reminder" : "Event"}</DialogTitle>
           <DialogDescription>
@@ -159,36 +157,6 @@ export function AddEventDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Date
-              </Label>
-              <Input
-                id="date"
-                value={selectedDate ? selectedDate.toLocaleDateString() : ""}
-                disabled
-                className="col-span-3"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Type
-              </Label>
-              <Select
-                value={type}
-                onValueChange={(value: "REMINDER" | "EVENT") => setType(value)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="REMINDER">Reminder</SelectItem>
-                  <SelectItem value="EVENT">Event</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="title" className="text-right">
                 Title
@@ -199,6 +167,36 @@ export function AddEventDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 className="col-span-3"
                 required
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <div className="col-span-3">
+                <Tabs
+                  value={type}
+                  onValueChange={(value) => setType(value as "REMINDER" | "EVENT")}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="EVENT">Event</TabsTrigger>
+                    <TabsTrigger value="REMINDER">Reminder</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <Input
+                id="date"
+                value={selectedDate ? selectedDate.toLocaleDateString() : ""}
+                disabled
+                className="col-span-3"
               />
             </div>
 
@@ -273,7 +271,15 @@ export function AddEventDialog({
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
             <Button type="submit" disabled={loading}>
               {loading ? "Creating..." : "Create"}
             </Button>

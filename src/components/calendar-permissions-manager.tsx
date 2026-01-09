@@ -719,18 +719,21 @@ export function CalendarPermissionsManager({
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Invite Members</DialogTitle>
-            <DialogDescription>
-              Add members to{" "}
-              <span className="font-semibold">{inviteDialog?.calendarName}</span>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col top-[5%] translate-y-0 p-0 gap-0 overflow-hidden">
+          <div className="p-6 pb-2">
+            <DialogHeader>
+              <DialogTitle>Invite Members</DialogTitle>
+              <DialogDescription>
+                Add members to{" "}
+                <span className="font-semibold">{inviteDialog?.calendarName}</span>
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div className="space-y-2">
               <Label>Search Users</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1 relative">
                   <Input
                     placeholder="Search by email..."
@@ -745,15 +748,15 @@ export function CalendarPermissionsManager({
                           className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
                           onClick={() => handleAddMember(user)}
                         >
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                          <div className="font-medium truncate">{user.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
                 <Select value={memberRole} onValueChange={setMemberRole}>
-                  <SelectTrigger className="w-28">
+                  <SelectTrigger className="w-full sm:w-28 shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -765,69 +768,96 @@ export function CalendarPermissionsManager({
               </div>
             </div>
 
-            {selectedMembers.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Members to Invite ({selectedMembers.length})</Label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label>Members to Invite ({selectedMembers.length})</Label>
+              <div className="min-h-[200px] max-h-[300px] overflow-y-auto border rounded-md p-2 bg-muted/20">
+                {selectedMembers.length === 0 ? (
+                  <div className="h-full min-h-[180px] flex items-center justify-center text-sm text-muted-foreground">
+                    Search and select users to invite
+                  </div>
+                ) : (
+                  <div className="space-y-2">
                     {selectedMembers.map((member) => (
                       <div
                         key={member.email}
-                        className="flex items-center gap-2 p-2 bg-muted rounded-md text-sm"
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 bg-background rounded-md border text-sm"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{member.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{member.email}</div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex-1 min-w-0 text-left focus:outline-none hover:opacity-80 transition-opacity"
+                            >
+                              <div className="font-medium truncate">{member.name}</div>
+                              <div className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-[220px]">
+                                {member.email}
+                              </div>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto max-w-[90vw] p-3" align="start" side="top">
+                            <div className="space-y-1">
+                              <div className="font-medium text-sm">{member.name}</div>
+                              <div className="text-xs text-muted-foreground break-all">
+                                {member.email}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Select 
+                            value={member.role} 
+                            onValueChange={(role) => handleUpdateMemberRole(member.email, role)}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="VIEWER">Viewer</SelectItem>
+                              <SelectItem value="EDITOR">Editor</SelectItem>
+                              <SelectItem value="ADMIN">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.email)}
+                            className="h-8 w-8 p-0 shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Select 
-                          value={member.role} 
-                          onValueChange={(role) => handleUpdateMemberRole(member.email, role)}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="VIEWER">Viewer</SelectItem>
-                            <SelectItem value="EDITOR">Editor</SelectItem>
-                            <SelectItem value="ADMIN">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(member.email)}
-                          className="h-8 w-8 p-0 shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))}
                   </div>
-                </div>
-              </>
-            )}
+                )}
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setInviteDialog(null);
-                setSelectedMembers([]);
-                setMemberEmail("");
-                setSearchResults([]);
-              }}
-              disabled={isInviting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleInviteMembers} 
-              disabled={selectedMembers.length === 0 || isInviting}
-            >
-              {isInviting ? "Inviting..." : `Invite ${selectedMembers.length} Member${selectedMembers.length !== 1 ? 's' : ''}`}
-            </Button>
-          </DialogFooter>
+          
+          <div className="p-6 pt-4 border-t">
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setInviteDialog(null);
+                  setSelectedMembers([]);
+                  setMemberEmail("");
+                  setSearchResults([]);
+                }}
+                disabled={isInviting}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleInviteMembers} 
+                disabled={selectedMembers.length === 0 || isInviting}
+              >
+                {isInviting ? "Inviting..." : `Invite ${selectedMembers.length} Member${selectedMembers.length !== 1 ? 's' : ''}`}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

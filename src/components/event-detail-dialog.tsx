@@ -127,7 +127,7 @@ export function EventDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] top-[10%] translate-y-0">
         <DialogHeader>
           <DialogTitle>
             {isLoading ? "Loading..." : event ? event.title : "Event Not Found"}

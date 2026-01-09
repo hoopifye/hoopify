@@ -6,6 +6,7 @@ import { useSession } from "@/lib/auth-client";
 import { signOutAction } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useUserStore } from "@/hooks/use-user-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,9 +30,12 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
     const { data: session, isPending } = useSession();
     const router = useRouter();
     const { setTheme, theme } = useTheme();
+    const { user: storedUser, clearUser } = useUserStore();
 
     const effectiveSession = session ?? initialSession;
-    const user = effectiveSession?.user;
+    // Use stored user for optimistic updates, fallback to session user
+    const sessionUser = effectiveSession?.user;
+    const user = storedUser || sessionUser;
     const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
     const displayImage = user?.image || `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.id || 'default'}`;
 
@@ -52,6 +56,8 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
+                                clearUser();
+                                window.dispatchEvent(new CustomEvent("user-logout"));
                                 await signOutAction();
                             }}
                         >
@@ -119,6 +125,8 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
                             <DropdownMenuItem
                                 className="cursor-pointer"
                                 onClick={async () => {
+                                    clearUser();
+                                    window.dispatchEvent(new CustomEvent("user-logout"));
                                     await signOutAction();
                                 }}
                             >

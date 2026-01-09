@@ -1,15 +1,11 @@
 import { getSession } from "@/lib/auth-actions";
 import { prisma } from "@/lib/auth";
-import {
-    updateUsernameAction,
-} from "@/lib/settings-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CalendarPermissionsManager } from "@/components/calendar-permissions-manager";
 import { AvatarUploadDialog } from "@/components/avatar-upload-dialog";
+import { NameUpdateForm } from "@/components/name-update-form";
 
 export default async function SettingsPage({
     searchParams,
@@ -61,18 +57,7 @@ export default async function SettingsPage({
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <form action={updateUsernameAction} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    defaultValue={user?.name || ""}
-                                    placeholder="Enter your name"
-                                />
-                            </div>
-                            <Button type="submit">Save name</Button>
-                        </form>
+                        <NameUpdateForm defaultName={user?.name || ""} />
 
                         <Separator />
 
