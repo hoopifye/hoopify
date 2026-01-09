@@ -25,14 +25,6 @@ const ResetPasswordEmail = (props: ResetPasswordProps) => {
         <Body className="bg-gray-100 py-[40px] font-sans text-center">
           <Container className="mx-auto max-w-[600px] rounded-[8px] bg-white p-[32px]">
             <Section>
-              <Img
-                src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`}
-                alt="hoopifye"
-                width="120"
-                height="120"
-                className="mx-auto"
-              />
-
               <Text className="mt-0 mb-[16px] font-bold text-[24px] text-gray-900">
                 Reset your password
               </Text>
