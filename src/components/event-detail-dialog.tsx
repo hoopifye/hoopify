@@ -47,16 +47,19 @@ export function EventDetailDialog({
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadEventDetails = async () => {
     if (!eventId) return;
     
     setIsLoading(true);
+    setError(null);
     try {
       const details = await getEventDetails(eventId);
       setEvent(details as EventDetails);
-    } catch (error) {
-      console.error("Failed to load event details:", error);
+    } catch (err) {
+      console.error("Failed to load event details:", err);
+      setError(err instanceof Error ? err.message : "Failed to load event details");
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +67,16 @@ export function EventDetailDialog({
 
   useEffect(() => {
     if (open && eventId) {
+      // Reset state when opening with a new event
+      setEvent(null);
+      setError(null);
+      setIsLoading(true);
       loadEventDetails();
+    } else if (!open) {
+      // Reset state when closing
+      setEvent(null);
+      setError(null);
+      setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, eventId]);
@@ -130,7 +142,7 @@ export function EventDetailDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {isLoading ? "Loading..." : event ? event.title : "Event Not Found"}
+            {isLoading ? "Loading..." : error ? "Error" : event ? event.title : "Event Not Found"}
           </DialogTitle>
           {event && (
             <DialogDescription>
@@ -142,6 +154,13 @@ export function EventDetailDialog({
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-destructive mb-4">{error}</p>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
           </div>
         ) : event ? (
           <>

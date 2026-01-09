@@ -121,14 +121,64 @@
   }
 }
 
-/* Reserve scrollbar gutter to avoid layout shifts between pages */
+/* 
+ * Stable scrollbar gutter - prevents layout shifts when dialogs/modals open.
+ * scrollbar-gutter: stable reserves space for the scrollbar even when overflow is hidden.
+ */
 html {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
+  overflow-y: scroll; /* Ensure scrollbar space is always reserved */
 }
 
-/* Fallback for browsers that don't support `scrollbar-gutter` */
+/*
+ * When dialogs open, react-remove-scroll (used by Radix UI) adds:
+ * - overflow: hidden to prevent background scrolling
+ * - padding-right to compensate for the removed scrollbar width
+ * 
+ * Since we use scrollbar-gutter: stable, the scrollbar space is ALREADY reserved,
+ * so we need to prevent react-remove-scroll from adding extra padding.
+ * 
+ * The !important declarations override the inline styles added by react-remove-scroll.
+ */
+html,
+body {
+  /* Reset any scroll compensation added by react-remove-scroll */
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* Target all states where react-remove-scroll might add padding compensation */
+html[data-scroll-locked="1"],
+html[style*="--removed-body-scroll-bar-size"],
+body[data-scroll-locked="1"],
+body[style*="--removed-body-scroll-bar-size"],
+body[style*="overflow: hidden"],
+body[style*="overflow:hidden"] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 
+ * Override the CSS variable that react-remove-scroll uses for padding calculation.
+ * This targets the root element where the variable is typically set.
+ */
+:root {
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* Ensure fixed positioned elements (like navbars) also don't shift */
+[data-radix-scroll-area-viewport] {
+  scrollbar-gutter: stable;
+}
+
+/* Fallback for browsers that don't support scrollbar-gutter */
 @supports not (scrollbar-gutter: stable) {
   html {
-    overflow-y: scroll;
+    overflow-y: scroll; /* Force scrollbar to always show */
+  }
+  
+  /* In fallback mode, allow normal padding compensation */
+  html[data-scroll-locked="1"],
+  body[data-scroll-locked="1"] {
+    padding-right: unset !important;
   }
 }

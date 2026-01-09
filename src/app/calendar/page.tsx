@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { DayButtonProps } from "react-day-picker";
 import { getEvents, getCalendars, getLastSelectedCalendar, updateLastSelectedCalendar, createCalendar } from "@/lib/calendar-actions";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Check, ChevronsUpDown, Settings, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
@@ -93,11 +93,13 @@ function getTimeToEvent(date: Date) {
   return "now";
 }
 
-export default function CalendarPage() {
+function CalendarPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [events, setEvents] = useState<Event[]>([]);
+  const urlParamsProcessed = useRef(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [calendars, setCalendars] = useState<{
     myCalendars: CalendarType[];
@@ -218,13 +220,46 @@ export default function CalendarPage() {
         myProjects: ProjectType[];
       });
       
-      // Load last selected calendar
-      const lastSelected = await getLastSelectedCalendar();
-      if (lastSelected) {
-        setSelectedCalendar(lastSelected);
+      // Check for URL parameters first (only on initial load)
+      const calendarIdParam = searchParams.get('calendar_id');
+      const eventIdParam = searchParams.get('event_id');
+      const dateParam = searchParams.get('date');
+      
+      if (!urlParamsProcessed.current && calendarIdParam) {
+        urlParamsProcessed.current = true;
+        setSelectedCalendar(calendarIdParam);
+        await updateLastSelectedCalendar(calendarIdParam);
+        
+        // Set the date if provided
+        if (dateParam) {
+          const eventDate = new Date(dateParam);
+          if (!isNaN(eventDate.getTime())) {
+            setSelectedDate(eventDate);
+            setCurrentMonth(eventDate);
+          }
+        }
+        
+        // Open event detail dialog if event_id is provided
+        if (eventIdParam) {
+          setSelectedEventId(eventIdParam);
+          setEventDetailDialogOpen(true);
+        }
+        
+        // Clear URL params after a short delay to avoid interrupting the fetch
+        setTimeout(() => {
+          window.history.replaceState({}, '', '/calendar');
+        }, 100);
+      } else if (!urlParamsProcessed.current) {
+        urlParamsProcessed.current = true;
+        // Load last selected calendar only if no URL params
+        const lastSelected = await getLastSelectedCalendar();
+        if (lastSelected) {
+          setSelectedCalendar(lastSelected);
+        }
       }
     };
     fetchCalendars();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -692,5 +727,17 @@ export default function CalendarPage() {
         onEventUpdated={() => setRefreshTrigger(prev => prev + 1)}
       />
     </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[calc(100dvh-3.5rem)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <CalendarPageContent />
+    </Suspense>
   );
 }

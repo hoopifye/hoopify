@@ -758,15 +758,15 @@ export function CalendarPermissionsManager({
           }
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col top-[10%] translate-y-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Invite Members</DialogTitle>
             <DialogDescription>
               Add members to{" "}
               <span className="font-semibold">{inviteDialog?.calendarName}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
             <div className="space-y-2">
               <Label>Search Users</Label>
               <div className="flex gap-2">
@@ -809,7 +809,7 @@ export function CalendarPermissionsManager({
                 <Separator />
                 <div className="space-y-2">
                   <Label>Members to Invite ({selectedMembers.length})</Label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 h-[280px] overflow-y-auto pr-1">
                     {selectedMembers.map((member) => (
                       <div
                         key={member.email}
@@ -906,7 +906,7 @@ export function CalendarPermissionsManager({
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button 
               variant="outline" 
               onClick={() => {
