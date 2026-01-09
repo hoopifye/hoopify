@@ -26,9 +26,11 @@ const EmailCode = (props: EmailCodeProps) => {
           <Container className="mx-auto max-w-[600px] rounded-[8px] bg-white p-[32px]">
             <Section className="mb-[32px]">
               <Img
-                src="https://new.email/static/app/placeholder.png"
+                src={`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`}
                 alt="hoopifye"
-                className="w-[120px] h-auto object-cover mx-auto"
+                width="120"
+                height="120"
+                className="mx-auto"
               />
             </Section>
 
