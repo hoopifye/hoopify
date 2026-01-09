@@ -7,41 +7,39 @@ import { revalidatePath } from "next/cache";
 export async function updateUsernameAction(formData: FormData) {
     const name = formData.get("name") as string;
     if (!name || name.trim().length === 0) {
-        return { error: "Name is required" };
+        throw new Error("Name is required");
     }
 
     const session = await getSession();
-    if (!session?.user?.id) return { error: "Not authenticated" };
+    if (!session?.user?.id) throw new Error("Not authenticated");
 
     try {
         await prisma.user.update({
             where: { id: session.user.id },
             data: { name: name.trim() },
         });
+        revalidatePath("/settings");
     } catch (err: any) {
-        return { error: err?.message || "Failed to update name" };
+        throw new Error(err?.message || "Failed to update name");
     }
-
-    return { success: true };
 }
 
 export async function updateAvatarAction(formData: FormData) {
     const image = formData.get("image") as string;
-    if (!image) return { error: "Image URL is required" };
+    if (!image) throw new Error("Image URL is required");
 
     const session = await getSession();
-    if (!session?.user?.id) return { error: "Not authenticated" };
+    if (!session?.user?.id) throw new Error("Not authenticated");
 
     try {
         await prisma.user.update({
             where: { id: session.user.id },
             data: { image: image.trim() },
         });
+        revalidatePath("/settings");
     } catch (err: any) {
-        return { error: err?.message || "Failed to update avatar" };
+        throw new Error(err?.message || "Failed to update avatar");
     }
-
-    return { success: true };
 }
 
 export async function changeCalendarMemberRoleAction(formData: FormData) {

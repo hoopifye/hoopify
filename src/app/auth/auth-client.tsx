@@ -149,6 +149,7 @@ export default function AuthPageClient({ initialTab, error: urlError }: { initia
                 setError(result.error);
                 setIsLoading(false);
             } else if (result?.success) {
+                // Force full page reload to ensure session is properly loaded
                 window.location.href = "/";
             } else {
                 setIsLoading(false);

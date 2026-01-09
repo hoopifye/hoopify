@@ -194,13 +194,14 @@ model ProjectMember {
 
 model Invite {
   id           String       @id @default(cuid())
-  email        String
+  email        String?
   senderId     String
   sender       User         @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
   resourceId   String
   resourceType String       // "CALENDAR" or "PROJECT"
   role         String
   status       InviteStatus @default(PENDING)
+  token        String?      @unique  // Unique token for invite links
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
