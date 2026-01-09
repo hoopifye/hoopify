@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Calendar, CheckSquare, Clock, Target, Zap, Users, ArrowRight, Sparkles } from "lucide-react";
+import { Calendar, CheckSquare, Clock, Target, Zap, Calendar1Icon, ArrowRight, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -41,23 +41,23 @@ const features = [
     gradient: "from-orange-500 to-red-500"
   },
   {
-    icon: Zap,
-    title: "Quick Actions",
-    description: "Get things done faster with keyboard shortcuts and smart automation.",
-    gradient: "from-yellow-500 to-orange-500"
+    icon: Calendar1Icon,
+    title: "Invites System",
+    description: "Send and manage calendar invitations effortlessly. Share events with team members using secure invite links.",
+    gradient: "from-green-500 to-emerald-500"
   },
   {
-    icon: Clock,
-    title: "Time Tracking",
-    description: "Monitor time spent on tasks and optimize your productivity.",
+    icon: Lock,
+    title: "Calendar Permissions",
+    description: "Control who can view and edit your calendars with granular permission settings and role-based access.",
     gradient: "from-indigo-500 to-blue-500"
   },
   {
-    icon: Users,
-    title: "Team Collaboration",
-    description: "Work together seamlessly with shared calendars and real-time updates.",
-    gradient: "from-green-500 to-emerald-500"
-  },
+    icon: Zap,
+    title: "Easy Authentication",
+    description: "Sign in quickly with email verification, password reset, and secure Web3 wallet authentication options.",
+    gradient: "from-yellow-500 to-orange-500"
+  }
 ];
 
 export default function Home() {
