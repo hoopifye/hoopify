@@ -3,16 +3,21 @@ import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 export async function proxy(request: NextRequest) {
+    const { pathname } = request.nextUrl;
+
+    // Allow access to homepage and auth routes
+    if (
+        pathname === "/" ||
+        pathname.startsWith("/auth")
+    ) {
+        return NextResponse.next();
+    }
+
+    // For all other routes, check authentication
     const sessionCookie = getSessionCookie(request);
-
-    // Define protected routes
-    const protectedRoutes = ["/dashboard", "/admin", "/settings", "/calendar"];
-    const isProtectedRoute = protectedRoutes.some((route) =>
-        request.nextUrl.pathname.startsWith(route)
-    );
-
-    if (isProtectedRoute && !sessionCookie) {
-        return NextResponse.redirect(new URL("/auth?tab=login", request.url));
+    
+    if (!sessionCookie) {
+        return NextResponse.redirect(new URL("/auth", request.url));
     }
 
     return NextResponse.next();
@@ -20,12 +25,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        // Protect specific dashboard routes
-        "/dashboard/:path*",
-        "/admin/:path*",
-        "/settings/:path*",
-        "/calendar/:path*",
-        // Don't run on static files
+        // Match all routes except static files and API routes
         "/((?!api|_next/static|_next/image|favicon.ico).*)",
     ],
 };

@@ -1,57 +1,91 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { getPendingInvitesAction, acceptInviteAction, declineInviteAction } from "@/lib/invite-actions";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Mail, Briefcase } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Invite = {
   id: string;
   senderName: string;
-  senderRole: "Owner" | "Admin";
   resourceName: string;
-  resourceType: "Calendar" | "Project";
+  resourceType: string;
   inviteDate: Date;
-  roleOffered: "Owner" | "Admin" | "Editor" | "Viewer";
+  roleOffered: string;
 };
 
-// Hardcoded invites data
-const hardcodedInvites: Invite[] = [
-  {
-    id: "1",
-    senderName: "John Doe",
-    senderRole: "Owner",
-    resourceName: "Team Marketing Calendar",
-    resourceType: "Calendar",
-    inviteDate: new Date("2025-12-20"),
-    roleOffered: "Editor",
-  },
-  {
-    id: "2",
-    senderName: "Jane Smith",
-    senderRole: "Admin",
-    resourceName: "Q1 Product Launch",
-    resourceType: "Project",
-    inviteDate: new Date("2025-12-28"),
-    roleOffered: "Viewer",
-  },
-  {
-    id: "3",
-    senderName: "Mike Johnson",
-    senderRole: "Owner",
-    resourceName: "Company Events",
-    resourceType: "Calendar",
-    inviteDate: new Date("2026-01-02"),
-    roleOffered: "Admin",
-  },
-];
-
 export default function InvitesPage() {
-  const [invites, setInvites] = useState<Invite[]>(hardcodedInvites);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dialog, setDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  });
 
-  const handleAcceptInvite = (inviteId: string) => {
-    setInvites((prev) => prev.filter((invite) => invite.id !== inviteId));
-    // Here you would typically make an API call to accept the invite
-    console.log(`Accepted invite: ${inviteId}`);
+  const showAlert = (title: string, message: string) => {
+    setDialog({ open: true, title, message });
+  };
+
+  const fetchInvites = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await getPendingInvitesAction();
+      if ('error' in result && result.error) {
+        showAlert("Error", result.error);
+      } else if ('invites' in result) {
+        setInvites(result.invites as Invite[]);
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert("Error", "An unexpected error occurred while fetching invites.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInvites();
+  }, [fetchInvites]);
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      const result = await acceptInviteAction(inviteId);
+      if (result.error) {
+        showAlert("Error", result.error);
+      } else {
+        showAlert("Success", "Invitation accepted");
+        setInvites((prev) => prev.filter((invite) => invite.id !== inviteId));
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert("Error", "Failed to accept invitation");
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    try {
+      const result = await declineInviteAction(inviteId);
+      if (result.error) {
+        showAlert("Error", result.error);
+      } else {
+        showAlert("Success", "Invitation declined");
+        setInvites((prev) => prev.filter((invite) => invite.id !== inviteId));
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert("Error", "Failed to decline invitation");
+    }
   };
 
   return (
@@ -64,56 +98,79 @@ export default function InvitesPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
-          {invites.length > 0 ? (
+        <div className="space-y-2">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <LoadingSpinner className="w-8 h-8" />
+            </div>
+          ) : invites.length > 0 ? (
             invites.map((invite) => (
-              <Card key={invite.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">
+              <Card key={invite.id} className="p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {invite.resourceType === "Calendar" ? (
+                      <Mail className="h-7 w-7 text-blue-500 shrink-0" />
+                    ) : (
+                      <Briefcase className="h-7 w-7 text-purple-500 shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm truncate">
                         {invite.resourceName}
-                      </CardTitle>
-                      <CardDescription>
-                        {invite.resourceType} • Invited by {invite.senderName} ({invite.senderRole})
-                      </CardDescription>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        Invited by {invite.senderName} • {invite.roleOffered}
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {invite.inviteDate.toLocaleDateString("en-US", {
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(invite.inviteDate).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
-                        year: "numeric",
                       })}
                     </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Role offered: </span>
-                      <span className="font-medium">{invite.roleOffered}</span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeclineInvite(invite.id)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Decline
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAcceptInvite(invite.id)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        Accept
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAcceptInvite(invite.id)}
-                    >
-                      Accept
-                    </Button>
                   </div>
-                </CardContent>
+                </div>
               </Card>
             ))
           ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  No pending invites
-                </p>
-              </CardContent>
+            <Card className="p-3">
+              <p className="text-center text-sm text-muted-foreground">
+                No pending invites
+              </p>
             </Card>
           )}
         </div>
       </div>
+
+      <Dialog open={dialog.open} onOpenChange={(open) => setDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialog.title}</DialogTitle>
+            <DialogDescription>{dialog.message}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setDialog(prev => ({ ...prev, open: false }))}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

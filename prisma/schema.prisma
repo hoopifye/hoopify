@@ -54,6 +54,7 @@ model User {
   events                  EventParticipant[]
   calendars               CalendarMember[]
   projects                ProjectMember[]
+  sentInvites             Invite[]           @relation("SentInvites")
 }
 
 model Session {
@@ -86,6 +87,7 @@ model Event {
   startDate   DateTime
   endDate     DateTime
   type        EventType @default(EVENT)
+  completed   Boolean  @default(false)
   calendarId  String
   calendar    Calendar  @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   checklist   ChecklistItem[]
@@ -185,4 +187,25 @@ model ProjectMember {
   updatedAt DateTime    @updatedAt
 
   @@unique([projectId, userId])
+}
+
+model Invite {
+  id           String       @id @default(cuid())
+  email        String
+  senderId     String
+  sender       User         @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  resourceId   String
+  resourceType String       // "CALENDAR" or "PROJECT"
+  role         String
+  status       InviteStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([email, resourceId, resourceType])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }

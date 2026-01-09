@@ -146,21 +146,27 @@ export async function getEvents(startDate: Date, endDate: Date, calendarId?: str
     return [];
   }
 
-  // First get all calendars the user is a member of
-  const userCalendars = await prisma.calendarMember.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      calendarId: true,
-    },
-  });
+  let calendarIds: string[];
 
-  const calendarIds = userCalendars.map((c) => c.calendarId);
+  // If a specific calendar is provided, use only that
+  if (calendarId) {
+    calendarIds = [calendarId];
+  } else {
+    // Otherwise get all calendars the user is a member of
+    const userCalendars = await prisma.calendarMember.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        calendarId: true,
+      },
+    });
+    calendarIds = userCalendars.map((c) => c.calendarId);
+  }
 
   const events = await prisma.event.findMany({
     where: {
-      calendarId: calendarId ? calendarId : { in: calendarIds },
+      calendarId: { in: calendarIds },
       startDate: {
         gte: startDate,
       },
@@ -288,6 +294,171 @@ export async function updateLastSelectedCalendar(calendarId: string) {
   await prisma.user.update({
     where: { id: session.user.id },
     data: { lastSelectedCalendarId: calendarId },
+  });
+
+  revalidatePath("/calendar");
+}
+
+export async function getEventDetails(eventId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      checklist: true,
+      participants: {
+        where: { userId: session.user.id },
+      },
+      calendar: {
+        include: {
+          members: {
+            where: { userId: session.user.id },
+          },
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  // Check if user has access to this event (either as participant or calendar member)
+  const hasAccess = event.participants.length > 0 || event.calendar.members.length > 0;
+  
+  if (!hasAccess) {
+    throw new Error("You don't have permission to view this event");
+  }
+
+  return {
+    id: event.id,
+    title: event.title,
+    description: event.description,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    type: event.type,
+    checklist: event.checklist,
+  };
+}
+
+export async function dismissReminder(eventId: string) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      participants: {
+        where: { userId: session.user.id },
+      },
+      calendar: {
+        include: {
+          members: {
+            where: { userId: session.user.id },
+          },
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  // Check if it's a reminder
+  if (event.type !== "REMINDER") {
+    throw new Error("Only reminders can be dismissed");
+  }
+
+  // Check if user has permission (participant owner or calendar editor/owner)
+  const isParticipantOwner = event.participants.some((p) => p.role === "OWNER");
+  const isCalendarEditorOrOwner = event.calendar.members.some(
+    (m) => m.role === "OWNER" || m.role === "EDITOR"
+  );
+
+  if (!isParticipantOwner && !isCalendarEditorOrOwner) {
+    throw new Error("You don't have permission to dismiss this reminder");
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { completed: true },
+  });
+
+  revalidatePath("/calendar");
+}
+
+export async function toggleChecklistItem(checklistItemId: string, completed: boolean) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const checklistItem = await prisma.checklistItem.findUnique({
+    where: { id: checklistItemId },
+    include: {
+      event: {
+        include: {
+          participants: {
+            where: { userId: session.user.id },
+          },
+          calendar: {
+            include: {
+              members: {
+                where: { userId: session.user.id },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!checklistItem) {
+    throw new Error("Checklist item not found");
+  }
+
+  // Check if user has access (participant or calendar member with editor/owner role)
+  const hasAccess = 
+    checklistItem.event.participants.length > 0 || 
+    checklistItem.event.calendar.members.some(
+      (m) => m.role === "OWNER" || m.role === "EDITOR"
+    );
+
+  if (!hasAccess) {
+    throw new Error("You don't have permission to modify this checklist item");
+  }
+
+  await prisma.checklistItem.update({
+    where: { id: checklistItemId },
+    data: { completed },
+  });
+
+  // Check if all checklist items are completed and update event accordingly
+  const allChecklistItems = await prisma.checklistItem.findMany({
+    where: { eventId: checklistItem.eventId },
+  });
+
+  const allCompleted = allChecklistItems.length > 0 && allChecklistItems.every(item => item.completed);
+  
+  // Update event completed status based on checklist completion
+  await prisma.event.update({
+    where: { id: checklistItem.eventId },
+    data: { completed: allCompleted },
   });
 
   revalidatePath("/calendar");
