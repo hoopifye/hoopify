@@ -8,7 +8,10 @@ import { getCookies } from "better-auth/cookies";
 
 export async function loginWithWeb3(address: string, signature: string) {
     try {
+        console.log("=== WEB3 LOGIN START ===");
+        console.log("NODE_ENV:", process.env.NODE_ENV);
         console.log("BETTER_AUTH_SECRET Present:", !!process.env.BETTER_AUTH_SECRET);
+        console.log("Address:", address);
 
         const message = "Sign in to Hoopify";
 
@@ -16,6 +19,8 @@ export async function loginWithWeb3(address: string, signature: string) {
             message,
             signature: signature as `0x${string}`,
         });
+
+        console.log("Recovered address:", recoveredAddress);
 
         const effectiveAddress = recoveredAddress.toLowerCase();
 
@@ -87,7 +92,7 @@ export async function loginWithWeb3(address: string, signature: string) {
 
         // 2. Create Session manually
         const token = crypto.randomBytes(32).toString("hex");
-        const sessionMaxAgeSeconds = auth.options.session?.expiresIn ?? 60 * 60 * 24 * 30;
+        const sessionMaxAgeSeconds = 60 * 60 * 24 * 30; // 30 days default
         const expiresAt = new Date(Date.now() + sessionMaxAgeSeconds * 1000);
 
         await prisma.session.create({
@@ -102,6 +107,7 @@ export async function loginWithWeb3(address: string, signature: string) {
         // 3. Set signed session cookie for Better Auth
         const secret = auth.options.secret || process.env.BETTER_AUTH_SECRET;
         if (!secret) {
+            console.error("Missing BETTER_AUTH_SECRET");
             return { error: "Missing BETTER_AUTH_SECRET. Set it to enable web3 login." };
         }
 
@@ -110,11 +116,32 @@ export async function loginWithWeb3(address: string, signature: string) {
 
         const cookieStore = await cookies();
         const { sessionToken } = getCookies(auth.options);
+        
+        console.log("Setting cookie:", sessionToken.name);
+        console.log("Cookie options:", {
+            domain: sessionToken.options.domain,
+            httpOnly: sessionToken.options.httpOnly,
+            path: sessionToken.options.path,
+            secure: sessionToken.options.secure,
+            sameSite: sessionToken.options.sameSite,
+        });
+        
+        // Create a properly typed cookie options object
+        const sameSite = sessionToken.options.sameSite?.toLowerCase() as 'lax' | 'strict' | 'none' | undefined;
+        
+        // Only use secure cookies when using HTTPS
+        const useSecure = sessionToken.options.secure ?? false;
+        
         cookieStore.set(sessionToken.name, cookieValue, {
-            ...sessionToken.options,
+            domain: sessionToken.options.domain,
+            httpOnly: sessionToken.options.httpOnly ?? true,
+            path: sessionToken.options.path ?? "/",
+            secure: useSecure,
+            sameSite: sameSite ?? "lax",
             maxAge: sessionMaxAgeSeconds,
         });
 
+        console.log("=== WEB3 LOGIN SUCCESS ===");
         return { success: true };
 
     } catch (error: unknown) {

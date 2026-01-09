@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, X, Link, Copy, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { changeCalendarMemberRoleAction, leaveCalendarAction, deleteCalendarAction, searchUsersByEmailAction, addCalendarMemberAction, removeCalendarMemberAction, transferCalendarOwnershipAction } from "@/lib/settings-actions";
+import { createInviteLinkAction } from "@/lib/invite-actions";
 
 type CalendarMember = {
   id: string;
@@ -115,6 +116,10 @@ export function CalendarPermissionsManager({
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [selectedMembers, setSelectedMembers] = useState<Array<{ email: string; role: string; name: string }>>([]);
   const [isInviting, setIsInviting] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteLinkRole, setInviteLinkRole] = useState("VIEWER");
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const selectedCalendarData = calendars.find((c) => c.id === selectedCalendar);
 
@@ -292,6 +297,38 @@ export function CalendarPermissionsManager({
       console.error("Failed to invite members:", error);
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleGenerateInviteLink = async () => {
+    if (!inviteDialog) return;
+    
+    setIsGeneratingLink(true);
+    try {
+      const result = await createInviteLinkAction(inviteDialog.calendarId, inviteLinkRole);
+      
+      if (result.error) {
+        alert(result.error);
+      } else if (result.token) {
+        const link = `${window.location.origin}/invite/${result.token}`;
+        setInviteLink(link);
+      }
+    } catch (error) {
+      console.error("Failed to generate invite link:", error);
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy link:", error);
     }
   };
 
@@ -716,6 +753,8 @@ export function CalendarPermissionsManager({
             setSelectedMembers([]);
             setMemberEmail("");
             setSearchResults([]);
+            setInviteLink(null);
+            setLinkCopied(false);
           }
         }}
       >
@@ -807,6 +846,65 @@ export function CalendarPermissionsManager({
                 </div>
               </>
             )}
+
+            {/* Invite Link Section */}
+            <Separator />
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Link className="h-4 w-4" />
+                Share Invite Link
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Generate a link that anyone can use to join this calendar.
+              </p>
+              
+              {!inviteLink ? (
+                <div className="flex gap-2">
+                  <Select value={inviteLinkRole} onValueChange={setInviteLinkRole}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="VIEWER">Viewer</SelectItem>
+                      <SelectItem value="EDITOR">Editor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerateInviteLink}
+                    disabled={isGeneratingLink}
+                    className="flex-1"
+                  >
+                    {isGeneratingLink ? "Generating..." : "Generate Link"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={inviteLink}
+                      readOnly
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyInviteLink}
+                      className="shrink-0"
+                    >
+                      {linkCopied ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone with this link can join as <span className="font-medium">{inviteLinkRole}</span>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button 
@@ -816,6 +914,8 @@ export function CalendarPermissionsManager({
                 setSelectedMembers([]);
                 setMemberEmail("");
                 setSearchResults([]);
+                setInviteLink(null);
+                setLinkCopied(false);
               }}
               disabled={isInviting}
             >

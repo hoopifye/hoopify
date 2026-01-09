@@ -126,7 +126,7 @@ export default function UpcomingPage() {
                     {isLate(item.startDate) && (
                       <span className="text-xs font-medium text-red-500 whitespace-nowrap">Late</span>
                     )}
-                    <Button size="xs" variant="outline" onClick={() => handleDismiss(item.id)} className="h-7 px-2">
+                    <Button size="sm" variant="outline" onClick={() => handleDismiss(item.id)} className="h-7 px-2">
                       <span className="text-xs">Dismiss</span>
                     </Button>
                   </div>

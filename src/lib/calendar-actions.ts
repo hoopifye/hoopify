@@ -248,12 +248,14 @@ export async function getCalendars() {
       where: { id: session.user.id },
       select: { id: true, name: true, email: true, image: true },
     });
-    myCalendars = [{ 
-      ...defaultCalendar, 
-      role: "OWNER" as const,
-      owner: user,
-      members: [],
-    }];
+    if (user) {
+      myCalendars = [{ 
+        ...defaultCalendar, 
+        role: "OWNER" as const,
+        owner: user,
+        members: [],
+      }];
+    }
   }
 
   const sharedCalendars = calendarMemberships
@@ -378,6 +380,7 @@ export async function getEventDetails(eventId: string) {
     startDate: event.startDate,
     endDate: event.endDate,
     type: event.type,
+    completed: event.completed,
     checklist: event.checklist,
   };
 }
@@ -497,4 +500,93 @@ export async function toggleChecklistItem(checklistItemId: string, completed: bo
   });
 
   revalidatePath("/calendar");
+}
+
+export async function getUpcomingItems() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const now = new Date();
+
+  const events = await prisma.event.findMany({
+    where: {
+      startDate: {
+        gte: now,
+      },
+      OR: [
+        {
+          participants: {
+            some: {
+              userId: session.user.id,
+            },
+          },
+        },
+        {
+          calendar: {
+            members: {
+              some: {
+                userId: session.user.id,
+              },
+            },
+          },
+        },
+      ],
+    },
+    include: {
+      calendar: true,
+    },
+    orderBy: {
+      startDate: "asc",
+    },
+  });
+
+  return events;
+}
+
+export async function getUpcomingRemindersCount() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return 0;
+  }
+
+  const now = new Date();
+  const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  const count = await prisma.event.count({
+    where: {
+      type: "REMINDER",
+      startDate: {
+        gte: now,
+        lte: oneDayFromNow,
+      },
+      OR: [
+        {
+          participants: {
+            some: {
+              userId: session.user.id,
+            },
+          },
+        },
+        {
+          calendar: {
+            members: {
+              some: {
+                userId: session.user.id,
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  return count;
 }
