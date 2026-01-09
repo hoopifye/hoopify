@@ -6,11 +6,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Resend } from "resend";
 import EmailCode from "../components/emails/verification-code";
 
+// Allow self-signed certificates for Aiven PostgreSQL
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const pool = new Pool({ 
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === "production" || process.env.DATABASE_URL?.includes("sslmode=require")
-        ? { rejectUnauthorized: false }
-        : false
+    ssl: true
 });
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
