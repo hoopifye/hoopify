@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
+import { signOutAction } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -29,13 +30,9 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
     const router = useRouter();
     const { setTheme, theme } = useTheme();
 
-    const effectiveSession = session === undefined ? initialSession : session;
+    const effectiveSession = session ?? initialSession;
     const user = effectiveSession?.user;
-    
-    // Get the current theme icon
     const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
-
-    // Use user image or fallback to DiceBear with user name (which is the address fragment) or ID as seed
     const displayImage = user?.image || `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.id || 'default'}`;
 
     return (
@@ -55,8 +52,7 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
                             variant="outline"
                             size="sm"
                             onClick={async () => {
-                                await signOut();
-                                window.location.reload();
+                                await signOutAction();
                             }}
                         >
                             Log out
@@ -123,8 +119,7 @@ export function NavbarAuth({ initialSession }: NavbarAuthProps) {
                             <DropdownMenuItem
                                 className="cursor-pointer"
                                 onClick={async () => {
-                                    await signOut();
-                                    window.location.reload();
+                                    await signOutAction();
                                 }}
                             >
                                 <LogOut className="mr-2 h-4 w-4" />

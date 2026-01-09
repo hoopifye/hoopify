@@ -14,7 +14,7 @@ interface NavbarLinksProps {
 
 export function NavbarLinks({ initialSession, pathname }: NavbarLinksProps) {
     const { data: session } = useSession();
-    const effectiveSession = session === undefined ? initialSession : session;
+    const effectiveSession = session ?? initialSession;
     const user = effectiveSession?.user;
 
     const [reminderCount, setReminderCount] = useState(0);

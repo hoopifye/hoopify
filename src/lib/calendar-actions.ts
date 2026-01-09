@@ -1,9 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/auth";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-
+import { getSession } from "@/lib/auth-actions";
 import { revalidatePath } from "next/cache";
 
 export async function createCalendar(data: {
@@ -12,9 +10,7 @@ export async function createCalendar(data: {
   color?: string;
   isDefault?: boolean;
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -40,9 +36,7 @@ export async function createCalendar(data: {
 }
 
 export async function getOrCreateDefaultCalendar() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -91,9 +85,7 @@ export async function createEvent(data: {
   calendarId: string;
   checklist?: string[];
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -138,9 +130,7 @@ export async function createEvent(data: {
 }
 
 export async function getEvents(startDate: Date, endDate: Date, calendarId?: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     return [];
@@ -193,9 +183,7 @@ export async function getEvents(startDate: Date, endDate: Date, calendarId?: str
 }
 
 export async function getCalendars() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     return {
@@ -286,9 +274,7 @@ export async function getCalendars() {
 }
 
 export async function getLastSelectedCalendar() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     return null;
@@ -320,9 +306,7 @@ export async function getLastSelectedCalendar() {
 }
 
 export async function updateLastSelectedCalendar(calendarId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -337,9 +321,7 @@ export async function updateLastSelectedCalendar(calendarId: string) {
 }
 
 export async function getEventDetails(eventId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -386,9 +368,7 @@ export async function getEventDetails(eventId: string) {
 }
 
 export async function dismissReminder(eventId: string) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -438,9 +418,7 @@ export async function dismissReminder(eventId: string) {
 }
 
 export async function toggleChecklistItem(checklistItemId: string, completed: boolean) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     throw new Error("Unauthorized");
@@ -503,9 +481,7 @@ export async function toggleChecklistItem(checklistItemId: string, completed: bo
 }
 
 export async function getUpcomingRemindersCount() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     return 0;
@@ -542,9 +518,7 @@ export async function getUpcomingRemindersCount() {
 }
 
 export async function getUpcomingItems() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getSession();
 
   if (!session) {
     return [];
