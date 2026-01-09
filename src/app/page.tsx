@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Calendar, CheckSquare, Users, Zap, Clock, Target, ArrowRight, Sparkles } from "lucide-react";
+import { Calendar, CheckSquare, Clock, Target, Zap, Users, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -41,10 +41,10 @@ const features = [
     gradient: "from-orange-500 to-red-500"
   },
   {
-    icon: Users,
-    title: "Team Collaboration",
-    description: "Work together seamlessly with shared calendars and real-time updates.",
-    gradient: "from-green-500 to-emerald-500"
+    icon: Zap,
+    title: "Quick Actions",
+    description: "Get things done faster with keyboard shortcuts and smart automation.",
+    gradient: "from-yellow-500 to-orange-500"
   },
   {
     icon: Clock,
@@ -53,11 +53,11 @@ const features = [
     gradient: "from-indigo-500 to-blue-500"
   },
   {
-    icon: Zap,
-    title: "Quick Actions",
-    description: "Get things done faster with keyboard shortcuts and smart automation.",
-    gradient: "from-yellow-500 to-orange-500"
-  }
+    icon: Users,
+    title: "Team Collaboration",
+    description: "Work together seamlessly with shared calendars and real-time updates.",
+    gradient: "from-green-500 to-emerald-500"
+  },
 ];
 
 export default function Home() {
